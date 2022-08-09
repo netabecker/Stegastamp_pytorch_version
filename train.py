@@ -1,3 +1,6 @@
+from aux_functions import *
+infoMessage(getLineNumber(), 'Successfully imported aux lib')
+from inspect import currentframe
 import os
 import yaml
 import random
@@ -14,21 +17,7 @@ from torch.utils.data import DataLoader
 from torch.utils.tensorboard import SummaryWriter
 import lpips
 
-""" ----------------------> Helper functions: """
-from inspect import currentframe
-
-
-def getLineNumber():
-    cf = currentframe()
-    return cf.f_back.f_lineno
-
-def infoMessage(string):
-    print(f'[in line {getLineNumber()}] {string}')
-
-
-""" ----------------------> End of helper functions """
-
-with open('cfg/setting_smaller_data.yaml', 'r') as f:
+with open('cfg/setting.yaml', 'r') as f:
     args = EasyDict(yaml.load(f, Loader=yaml.SafeLoader))
 
 if not os.path.exists(args.checkpoints_path):
@@ -39,9 +28,11 @@ if not os.path.exists(args.saved_models):
 
 
 def main():
+    infoMessage(getLineNumber(), 'Beginning of main')
     log_path = os.path.join(args.logs_path, str(args.exp_name))
     writer = SummaryWriter(log_path)
 
+    infoMessage(getLineNumber(), 'Loading the data')
     dataset = StegaData(args.train_path, args.secret_size, size=(400, 400))
     dataloader = DataLoader(dataset, batch_size=args.batch_size, shuffle=True, pin_memory=True)
 
@@ -50,7 +41,7 @@ def main():
     discriminator = model.Discriminator()
     lpips_alex = lpips.LPIPS(net="alex", verbose=False)
     if args.cuda:
-        infoMessage('Cuda was enabled')
+        infoMessage(getLineNumber(), 'Cuda = True')
         encoder = encoder.cuda()
         decoder = decoder.cuda()
         discriminator = discriminator.cuda()
@@ -70,6 +61,13 @@ def main():
     total_steps = len(dataset) // args.batch_size + 1
     global_step = 0
 
+    infoMessage(getLineNumber(), 'Running over the data')
+    infoMessage(getLineNumber(), 'initializing loss arrays')
+
+    loss_array = []
+    # lpips_loss_array = []
+    secret_loss_array = []
+    D_loss_array = []
     while global_step < args.num_steps:
         for _ in range(min(total_steps, args.num_steps - global_step)):
             image_input, secret_input = next(iter(dataloader))
@@ -114,8 +112,15 @@ def main():
                     optimize_dis.zero_grad()
                     optimize_dis.step()
 
-            # if global_step % 10 == 0:
             print('{:g}: Loss = {:.4f}'.format(global_step, loss))
+
+            loss_array.append(loss.item())
+            secret_loss_array.append(secret_loss.item())
+            D_loss_array.append(D_loss.item())
+
+            if (global_step > 1000 and global_step % 500 == 0) or (global_step < 1000 and global_step % 100 == 0):
+                infoMessage(getLineNumber(), f'loss type: {loss.type()}')
+                graph_create(global_step, loss_array, secret_loss_array, D_loss_array)
     writer.close()
     torch.save(encoder, os.path.join(args.saved_models, "encoder.pth"))
     torch.save(decoder, os.path.join(args.saved_models, "decoder.pth"))

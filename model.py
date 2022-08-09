@@ -11,7 +11,22 @@ from kornia import color
 import torch.nn.functional as F
 from torchvision import transforms
 
+""" ----------------------> Helper functions: """
+from inspect import currentframe
 
+
+def getLineNumber():
+    cf = currentframe()
+    return cf.f_back.f_lineno
+
+def infoMessage(string):
+    print(f'[line {getLineNumber()}]: {string}')
+
+
+""" ----------------------> End of helper functions """
+
+
+infoMessage(f'{currentframe().f_back.f_lineno} Model - class dense')
 class Dense(nn.Module):
     def __init__(self, in_features, out_features, activation='relu', kernel_initializer='he_normal'):
         super(Dense, self).__init__()
@@ -34,7 +49,7 @@ class Dense(nn.Module):
                 outputs = nn.ReLU(inplace=True)(outputs)
         return outputs
 
-
+infoMessage('Model - class Conv2D')
 class Conv2D(nn.Module):
     def __init__(self, in_channels, out_channels, kernel_size=3, activation='relu', strides=1):
         super(Conv2D, self).__init__()
@@ -66,6 +81,7 @@ class Flatten(nn.Module):
         return input.view(input.size(0), -1)
 
 
+infoMessage(f'{currentframe().f_back.f_lineno} Model - class stegaStamp Encoder')
 class StegaStampEncoder(nn.Module):
     def __init__(self):
         super(StegaStampEncoder, self).__init__()
