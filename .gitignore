@@ -6,3 +6,5 @@
 *.png
 *.jpg
 /PerceptualSimilarity/
+*.iml
+*.xml
