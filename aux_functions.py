@@ -12,33 +12,57 @@ def infoMessage(line, string):
     print(f'[line {line}]: {string}')
 
 
-# def graph_create(num_steps, l2_loss_array, lpips_loss_array, secret_loss_array, G_loss_array):
-#     infoMessage(getLineNumber(), f'Displaying loss functions after {num_steps} iterations')
-#     epochs = range(0, num_steps)
-#     plt.plot(epochs, l2_loss_array, 'g', label='l2 loss')
-#     plt.plot(epochs, lpips_loss_array, 'b', label='lpips loss')
-#     plt.plot(epochs, secret_loss_array, 'r', label='secret loss')
-#     plt.plot(epochs, G_loss_array, 'm', label='G loss')
-#     plt.title('Loss results')
-#     plt.xlabel(f'Epochs = {epochs}')
-#     plt.ylabel('Loss')
-#     plt.legend()
-#     plt.savefig(f'loss_graphs/0608/loss_graph_{num_steps}_iterations')
-
-
-def graph_create(num_steps, loss, secret_loss, D_loss):
+def graph_create_prev_version(num_steps, loss, secret_loss, D_loss, labels_created):
     loss = np.array(loss)
     secret_loss = np.array(secret_loss)
     D_loss = np.array(D_loss)
     infoMessage(getLineNumber(), f'Displaying loss functions after {num_steps} iterations')
     epochs = range(0, num_steps)
-    plt.plot(epochs, loss, 'g', label='loss')
-    plt.plot(epochs, secret_loss, 'r', label='secret loss')
-    plt.plot(epochs, D_loss, 'm', label='D loss')
-    plt.title('Loss results')
+    if labels_created is False:
+        plt.plot(epochs, loss, 'g', label='loss')
+        plt.plot(epochs, secret_loss, 'r', label='secret loss')
+        plt.plot(epochs, D_loss, 'm', label='D loss')
+    else:
+        plt.plot(epochs, loss, 'g')
+        plt.plot(epochs, secret_loss, 'r')
+        plt.plot(epochs, D_loss, 'm')
+    plt.title('Total loss results')
     plt.xlabel(f'Epochs = {epochs}')
     plt.ylabel('Loss')
     plt.legend()
-    plt.savefig(f'loss_graphs/0908/loss_graph_{num_steps}_iterations')
+    plt.savefig(f'loss_graphs/0908_2nd_version/loss_graph_{num_steps}_iterations')
 
 
+def graph_create(num_steps, loss, secret_loss, D_loss, labels_created):
+    loss = np.array(loss)
+    secret_loss = np.array(secret_loss)
+    D_loss = np.array(D_loss)
+    infoMessage(getLineNumber(), f'Displaying loss functions after {num_steps} iterations')
+    create_graph_total_loss(num_steps, loss, secret_loss, D_loss, labels_created)
+    create_graph_secret_loss(num_steps, secret_loss, D_loss, labels_created)
+
+
+
+def create_graph_total_loss(num_steps, loss, secret_loss, D_loss, labels_created):
+    epochs = range(0, num_steps)
+    total_plt = plt.figure()
+    plt.plot(epochs, loss, 'g', label='loss')
+    plt.plot(epochs, secret_loss, 'r', label='secret loss')
+    plt.plot(epochs, D_loss, 'm', label='D loss')
+    plt.title('Total loss results')
+    plt.xlabel(f'Epochs = {epochs}')
+    plt.ylabel('Loss')
+    plt.legend()
+    plt.savefig(f'loss_graphs/0908_3rd_version/graph_{num_steps}_iterations_total_loss')
+
+
+def create_graph_secret_loss(num_steps, secret_loss, D_loss, labels_created):
+    epochs = range(0, num_steps)
+    secret_plt = plt.figure()
+    plt.plot(epochs, secret_loss, 'r', label='secret loss')
+    plt.plot(epochs, D_loss, 'm', label='D loss')
+    plt.title('Total loss results')
+    plt.xlabel(f'Epochs = {epochs}')
+    plt.ylabel('Loss')
+    plt.legend()
+    plt.savefig(f'loss_graphs/0908_3rd_version/graph_{num_steps}_iterations_secret_loss')

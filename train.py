@@ -68,6 +68,8 @@ def main():
     # lpips_loss_array = []
     secret_loss_array = []
     D_loss_array = []
+    graph_labels_created = False
+
     while global_step < args.num_steps:
         for _ in range(min(total_steps, args.num_steps - global_step)):
             image_input, secret_input = next(iter(dataloader))
@@ -120,7 +122,8 @@ def main():
 
             if (global_step > 1000 and global_step % 500 == 0) or (global_step < 1000 and global_step % 100 == 0):
                 infoMessage(getLineNumber(), f'loss type: {loss.type()}')
-                graph_create(global_step, loss_array, secret_loss_array, D_loss_array)
+                graph_create(global_step, loss_array, secret_loss_array, D_loss_array, graph_labels_created)
+                graph_labels_created = True # in order to create the labels just once.
     writer.close()
     torch.save(encoder, os.path.join(args.saved_models, "encoder.pth"))
     torch.save(decoder, os.path.join(args.saved_models, "decoder.pth"))
