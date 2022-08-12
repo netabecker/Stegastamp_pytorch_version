@@ -1,3 +1,4 @@
+from aux_functions import *
 import os
 import glob
 import bchlib
@@ -7,8 +8,11 @@ from PIL import Image, ImageOps
 import torch
 from torchvision import transforms
 
+infoMessage(getLineNumber(), 'NOTE! The residual depicts the difference between the original image and the StegaStamp')
 BCH_POLYNOMIAL = 137
 BCH_BITS = 5
+infoMessage(getLineNumber(), f'Starting to encode. \
+Defined:   BCH_POLYNOMIAL = {BCH_POLYNOMIAL}    BCH_BITS = {BCH_BITS}')
 
 
 def main():
@@ -19,7 +23,7 @@ def main():
     parser.add_argument('--images_dir', type=str, default=None)
     parser.add_argument('--save_dir', type=str, default=r'./images')
     parser.add_argument('--secret', type=str, default='Stega!!')
-    parser.add_argument('--secret_size', type=int, default=100)
+    parser.add_argument('--secret_size', type=int, default=7)  # changed from 100 to 7
     parser.add_argument('--cuda', type=bool, default=True)
     args = parser.parse_args()
 
@@ -30,25 +34,32 @@ def main():
     else:
         print('Missing input image')
         return
-
+    infoMessage(getLineNumber(), 'received input image')
+    infoMessage(getLineNumber(), 'loading encoder')
     encoder = torch.load(args.model)
     encoder.eval()
     if args.cuda:
         encoder = encoder.cuda()
+    infoMessage(getLineNumber(), 'encoder loaded')
 
     bch = bchlib.BCH(BCH_POLYNOMIAL, BCH_BITS)
+    infoMessage(getLineNumber(), f'beginning to use BCH library: bch={bch}')
 
     if len(args.secret) > 7:
         print('Error: Can only encode 56bits (7 characters) with ECC')
         return
 
-    data = bytearray(args.secret + ' ' * (7 - len(args.secret)), 'utf-8')
+    data = bytearray(args.secret + ' ' * (7 - len(args.secret)), 'utf-8')  # setting the length of secret to 7
     ecc = bch.encode(data)
     packet = data + ecc
+    infoMessage(getLineNumber(), f'data = {data}  data length = {len(data)}')
+    infoMessage(getLineNumber(), f'ecc = {ecc}')
+    infoMessage(getLineNumber(), f'packet = {packet}')
 
     packet_binary = ''.join(format(x, '08b') for x in packet)
     secret = [int(x) for x in packet_binary]
     secret.extend([0, 0, 0, 0])
+    infoMessage(getLineNumber(), f'secret = {secret}')
     secret = torch.tensor(secret, dtype=torch.float).unsqueeze(0)
     if args.cuda:
         secret = secret.cuda()
@@ -64,6 +75,7 @@ def main():
 
         with torch.no_grad():
             for filename in files_list:
+                infoMessage(getLineNumber(), 'convert photo to RGB, and convert to tensor')
                 image = Image.open(filename).convert("RGB")
                 image = ImageOps.fit(image, size)
                 image = to_tensor(image).unsqueeze(0)
@@ -82,9 +94,11 @@ def main():
 
                 save_name = os.path.basename(filename).split('.')[0]
 
+                infoMessage(getLineNumber(), 'saving encoded')
                 im = Image.fromarray(encoded)
                 im.save(args.save_dir + '/' + save_name + '_hidden.png')
 
+                infoMessage(getLineNumber(), 'saving residual')
                 im = Image.fromarray(residual)
                 im.save(args.save_dir + '/' + save_name + '_residual.png')
 
