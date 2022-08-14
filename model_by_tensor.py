@@ -15,20 +15,20 @@ warnings.filterwarnings('ignore')
 
 """ ----------------------> Helper functions: """
 from inspect import currentframe
-
+from aux_functions import *
 
 def getLineNumber():
     cf = currentframe()
     return cf.f_back.f_lineno
 
-def infoMessage(string):
-    print(f'[line {getLineNumber()}]: {string}')
+# def infoMessage(string):
+#     print(f'[line {getLineNumber()}]: {string}')
 
 
 """ ----------------------> End of helper functions """
 
 
-infoMessage(f'{currentframe().f_back.f_lineno} Model - class dense')
+infoMessage0(f'{currentframe().f_back.f_lineno} Model - class dense')
 class Dense(nn.Module):
     def __init__(self, in_features, out_features, activation='relu', kernel_initializer='he_normal'):
         super(Dense, self).__init__()
@@ -51,15 +51,16 @@ class Dense(nn.Module):
                 outputs = nn.ReLU(inplace=True)(outputs)
         return outputs
 
-infoMessage('Model - class Conv2D')
+infoMessage0('Model - class Conv2D')
 class Conv2D(nn.Module):
-    def __init__(self, in_channels, out_channels, kernel_size=3, activation='relu', strides=1):
+    def __init__(self, in_channels, out_channels, kernel_size=3, activation='relu', strides=1, padding='same'):
         super(Conv2D, self).__init__()
         self.in_channels = in_channels
         self.out_channels = out_channels
         self.kernel_size = kernel_size
         self.activation = activation
         self.strides = strides
+        self.padding = padding
 
         self.conv = nn.Conv2d(in_channels, out_channels, kernel_size, strides, int((kernel_size - 1) / 2))
         # default: using he_normal as the kernel initializer
@@ -83,9 +84,10 @@ class Flatten(nn.Module):
         return input.view(input.size(0), -1)
 
 
-infoMessage(f'{currentframe().f_back.f_lineno} Model - class StegaStamp Encoder')
+infoMessage0(f'{currentframe().f_back.f_lineno} Model - class StegaStamp Encoder')
 class StegaStampEncoder(nn.Module):
     def __init__(self):
+
         super(StegaStampEncoder, self).__init__()
         self.secret_dense = Dense(100, 7500, activation='relu', kernel_initializer='he_normal')
         self.conv1 = Conv2D(6, 32, 3, activation='relu')
@@ -101,7 +103,31 @@ class StegaStampEncoder(nn.Module):
         self.conv8 = Conv2D(64, 32, 3, activation='relu')
         self.up9 = Conv2D(32, 32, 3, activation='relu')
         self.conv9 = Conv2D(70, 32, 3, activation='relu')
+        self.conv10 = Conv2D(32, 32, 3, activation='relu')
         self.residual = Conv2D(32, 3, 1, activation=None)
+        infoMessage(getLineNumber(), 'finished training encoder!')
+        """
+
+        super(StegaStampEncoder, self).__init__()
+        self.secret_dense = Dense(100, 7500, activation='relu', kernel_initializer='he_normal')
+
+        self.conv1 = Conv2D(6, 32, 3, activation='relu')
+        self.conv2 = Conv2D(32, 32, 3, activation='relu', strides=2)
+        self.conv3 = Conv2D(32, 64, 3, activation='relu', strides=2)
+        self.conv4 = Conv2D(64, 128, 3, activation='relu', strides=2)
+        self.conv5 = Conv2D(128, 256, 3, activation='relu', strides=2)
+        self.up6 = Conv2D(256, 128, 3, activation='relu')
+        self.conv6 = Conv2D(256, 128, 3, activation='relu')
+        self.up7 = Conv2D(128, 64, 3, activation='relu')
+        self.conv7 = Conv2D(128, 64, 3, activation='relu')
+        self.up8 = Conv2D(64, 32, 3, activation='relu')
+        self.conv8 = Conv2D(64, 32, 3, activation='relu')
+        self.up9 = Conv2D(32, 32, 3, activation='relu')
+        self.conv9 = Conv2D(32, 32, 3, activation='relu')
+        self.residual = Conv2D(32, 3, 1, activation=None)
+        infoMessage(getLineNumber(), 'finished training encoder!')
+        """
+
 
     def forward(self, inputs):
         secrect, image = inputs
@@ -120,20 +146,38 @@ class StegaStampEncoder(nn.Module):
         conv5 = self.conv5(conv4)
         up6 = self.up6(nn.Upsample(scale_factor=(2, 2))(conv5))
 
-        infoMessage(f'conv4.size = {conv4.shape}, up6.size = {up6.shape}')
+        # infoMessage(getLineNumber(), f'conv4.size = {conv4.shape}, up6.size = {up6.shape}')
 
         merge6 = torch.cat([conv4, up6], dim=1)
         conv6 = self.conv6(merge6)
         up7 = self.up7(nn.Upsample(scale_factor=(2, 2))(conv6))
+
+        # infoMessage(getLineNumber(), f'conv3.size = {conv3.shape}, up7.size = {up7.shape}')
+
         merge7 = torch.cat([conv3, up7], dim=1)
         conv7 = self.conv7(merge7)
         up8 = self.up8(nn.Upsample(scale_factor=(2, 2))(conv7))
+
+        # infoMessage(getLineNumber(), f'conv2.size = {conv2.shape}, up8.size = {up8.shape}')
+
         merge8 = torch.cat([conv2, up8], dim=1)
+        # infoMessage(getLineNumber(), f'merge8.size = {merge8.shape}')
+
         conv8 = self.conv8(merge8)
+
+        # infoMessage(getLineNumber(), f'conv8.size = {conv8.shape}')
+
         up9 = self.up9(nn.Upsample(scale_factor=(2, 2))(conv8))
+
+        # infoMessage(getLineNumber(), f'conv1.size = {conv1.shape}, up9.size = {up9.shape}\n')
+
         merge9 = torch.cat([conv1, up9, inputs], dim=1)
+
+        # infoMessage(getLineNumber(), f'merge9.size = {merge9.shape}')
+
         conv9 = self.conv9(merge9)
-        residual = self.residual(conv9)
+        conv10 = self.conv10(conv9)    # added
+        residual = self.residual(conv10)
         return residual
 
 
@@ -164,6 +208,19 @@ class StegaStampDecoder(nn.Module):
         super(StegaStampDecoder, self).__init__()
         self.secret_size = secret_size
         self.stn = SpatialTransformerNetwork()
+
+        # self.decoder = nn.Sequential(
+        #     Conv2D(3, 32, 3, strides=2, activation='relu'),
+        #     Conv2D(32, 32, 3, activation='relu'),
+        #     Conv2D(32, 64, 3, strides=2, activation='relu'),
+        #     Conv2D(64, 64, 3, activation='relu'),
+        #     Conv2D(64, 64, 3, strides=2, activation='relu'),
+        #     Conv2D(64, 128, 3, strides=2, activation='relu'),
+        #     Conv2D(128, 128, 3, strides=2, activation='relu'),
+        #     Flatten(),
+        #     Dense(21632, 512, activation='relu'),
+        #     Dense(512, secret_size))
+
         self.decoder = nn.Sequential(
             Conv2D(3, 32, 3, strides=2, activation='relu'),
             Conv2D(32, 32, 3, activation='relu'),

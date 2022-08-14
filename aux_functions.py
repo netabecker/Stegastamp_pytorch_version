@@ -11,6 +11,9 @@ def getLineNumber():
 def infoMessage(line, string):
     print(f'[line {line}]: {string}')
 
+def infoMessage0(string):
+    print(f'[-----]: {string}')
+
 
 def graph_create_prev_version(num_steps, loss, secret_loss, D_loss, labels_created):
     loss = np.array(loss)
@@ -53,7 +56,7 @@ def create_graph_total_loss(num_steps, loss, secret_loss, D_loss, labels_created
     plt.xlabel(f'Epochs = {epochs}')
     plt.ylabel('Loss')
     plt.legend()
-    plt.savefig(f'loss_graphs/0908_3rd_version/graph_{num_steps}_iterations_total_loss')
+    plt.savefig(f'loss_graphs/1208_version/graph_iterations_total_loss_{num_steps}')
 
 
 def create_graph_secret_loss(num_steps, secret_loss, D_loss, labels_created):
@@ -65,4 +68,6 @@ def create_graph_secret_loss(num_steps, secret_loss, D_loss, labels_created):
     plt.xlabel(f'Epochs = {epochs}')
     plt.ylabel('Loss')
     plt.legend()
-    plt.savefig(f'loss_graphs/0908_3rd_version/graph_{num_steps}_iterations_secret_loss')
+    plt.savefig(f'loss_graphs/1208_version/graph_iterations_secret_loss_{num_steps}')
+
+

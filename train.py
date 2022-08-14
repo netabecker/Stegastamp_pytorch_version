@@ -1,10 +1,12 @@
 from aux_functions import *
+
 infoMessage(getLineNumber(), 'Successfully imported aux lib')
 from inspect import currentframe
 import os
 import yaml
 import random
-import model
+# import model
+import model_by_tensor as model
 import numpy as np
 from glob import glob
 from easydict import EasyDict
@@ -116,14 +118,16 @@ def main():
 
             print('{:g}: Loss = {:.4f}'.format(global_step, loss))
 
+            writer.add_scalars('Loss values', {'loss': loss.item(), 'secret loss': secret_loss.item(),
+                                               'D_loss loss': D_loss.item()})
+
             loss_array.append(loss.item())
             secret_loss_array.append(secret_loss.item())
             D_loss_array.append(D_loss.item())
 
-            if (global_step > 1000 and global_step % 500 == 0) or (global_step < 1000 and global_step % 100 == 0):
+            if (global_step > 1000 and global_step % 5000 == 0) or (global_step < 5000 and global_step % 1000 == 0):
                 infoMessage(getLineNumber(), f'loss type: {loss.type()}')
                 graph_create(global_step, loss_array, secret_loss_array, D_loss_array, graph_labels_created)
-                graph_labels_created = True # in order to create the labels just once.
     writer.close()
     torch.save(encoder, os.path.join(args.saved_models, "encoder.pth"))
     torch.save(decoder, os.path.join(args.saved_models, "decoder.pth"))
@@ -131,4 +135,3 @@ def main():
 
 if __name__ == '__main__':
     main()
-
