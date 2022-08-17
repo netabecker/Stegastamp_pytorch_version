@@ -1,16 +1,14 @@
+from aux_functions import *
 import glob
 import bchlib
 import numpy as np
-import matplotlib as plt
 import torch
 from PIL import Image, ImageOps, ImageFile
-from torchvision import transforms
 ImageFile.LOAD_TRUNCATED_IMAGES = True
+from torchvision import transforms
 
-# BCH_POLYNOMIAL = 137
-# BCH_BITS = 5
-BCH_POLYNOMIAL = 8219
-BCH_BITS = 38
+BCH_POLYNOMIAL = 137
+BCH_BITS = 5
 
 def main():
     import argparse
@@ -44,10 +42,8 @@ def main():
 
     with torch.no_grad():
         for filename in files_list:
-            print("opening the file")                       # debug
             image = Image.open(filename).convert("RGB")
             image = ImageOps.fit(image, size)
-            image.save("image.png", format="png")           # debug
             image = to_tensor(image).unsqueeze(0)
             if args.cuda:
                 image = image.cuda()
@@ -59,20 +55,24 @@ def main():
             secret = np.array(secret[0])
             secret = np.round(secret)
 
-            print(f'secret: \n{secret}\n')          # debug
+            infoMessage(getLineNumber(), f'secret = {secret}')
 
             packet_binary = "".join([str(int(bit)) for bit in secret[:96]])
-            print(f'packet_binary: \n{packet_binary}\nstring length: {len(packet_binary)}\n')          # debug
+            infoMessage(getLineNumber(), f'packet binary = {packet_binary}')
             packet = bytes(int(packet_binary[i: i + 8], 2) for i in range(0, len(packet_binary), 8))
             packet = bytearray(packet)
-            print(f'packet: \n{packet}\n')          # debug
+            infoMessage(getLineNumber(), f'packet = {packet}')
 
-            data = packet[:-bch.ecc_bytes]
-            ecc = packet[-bch.ecc_bytes:]
+            data, ecc = packet[:-bch.ecc_bytes], packet[-bch.ecc_bytes:]
 
-            print(f'data: {data}\necc: {ecc}\npacket decoded: {packet.decode}\n')          # debug
+            infoMessage(getLineNumber(), f'bch.ecc_bytes = {bch.ecc_bytes}')
+            infoMessage(getLineNumber(), f'data = {data}')
+            infoMessage(getLineNumber(), f'len(data) = {len(data)}')
+            infoMessage(getLineNumber(), f'ecc = {ecc}')
+            infoMessage(getLineNumber(), f'len(ecc) = {len(ecc)}')
 
             bitflips = bch.decode_inplace(data, ecc)
+            infoMessage(getLineNumber(), f'bitflips = {bitflips}')
             print(f'bitflips: {bitflips}')    # debug
             if bitflips != -1:
                 try:

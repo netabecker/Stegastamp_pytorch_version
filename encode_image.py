@@ -4,6 +4,7 @@ import glob
 import bchlib
 import numpy as np
 from PIL import Image, ImageOps
+import pdb
 
 import torch
 from torchvision import transforms
@@ -23,9 +24,11 @@ def main():
     parser.add_argument('--images_dir', type=str, default=None)
     parser.add_argument('--save_dir', type=str, default=r'./images')
     parser.add_argument('--secret', type=str, default='Stega!!')
-    parser.add_argument('--secret_size', type=int, default=7)  # changed from 100 to 7
+    parser.add_argument('--secret_size', type=int, default=100)
     parser.add_argument('--cuda', type=bool, default=True)
     args = parser.parse_args()
+
+    # pdb.set_trace()
 
     if args.image is not None:
         files_list = [args.image]
@@ -60,6 +63,8 @@ def main():
     secret = [int(x) for x in packet_binary]
     secret.extend([0, 0, 0, 0])
     infoMessage(getLineNumber(), f'secret = {secret}')
+    infoMessage(getLineNumber(), f'packet binary = {packet_binary}')
+    infoMessage(getLineNumber(), f'len((packet binary) = {len(packet_binary)}')
     secret = torch.tensor(secret, dtype=torch.float).unsqueeze(0)
     if args.cuda:
         secret = secret.cuda()
