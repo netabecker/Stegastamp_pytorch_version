@@ -287,7 +287,7 @@ def transform_net(encoded_image, args, global_step):
     encoded_image = encoded_image + noise
     encoded_image = torch.clamp(encoded_image, 0, 1)
 
-    # contrast & brightness
+    # contrast & brightness:
     contrast_scale = torch.Tensor(encoded_image.size()[0]).uniform_(contrast_params[0], contrast_params[1])
     contrast_scale = contrast_scale.reshape(encoded_image.size()[0], 1, 1, 1)
     if args.cuda:

@@ -119,9 +119,6 @@ class StegaStampEncoder(nn.Module):
         conv4 = self.conv4(conv3)
         conv5 = self.conv5(conv4)
         up6 = self.up6(nn.Upsample(scale_factor=(2, 2))(conv5))
-
-        infoMessage(f'conv4.size = {conv4.shape}, up6.size = {up6.shape}')
-
         merge6 = torch.cat([conv4, up6], dim=1)
         conv6 = self.conv6(merge6)
         up7 = self.up7(nn.Upsample(scale_factor=(2, 2))(conv6))
@@ -281,6 +278,8 @@ def build_model(encoder, decoder, discriminator, lpips_fn, secret_input, image_i
 
     residual = torchgeometry.warp_perspective(residual_warped, M[:, 0, :, :], dsize=(400, 400), flags='bilinear')
 
+    infoMessage(f'borders == {borders}. Setting to "no_edge"')
+    borders = 'no_edge'
     if borders == 'no_edge':
         encoded_image = image_input + residual
     elif borders == 'black':
