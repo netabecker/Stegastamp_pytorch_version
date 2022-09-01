@@ -66,13 +66,6 @@ def main():
     infoMessage(getLineNumber(), 'Running over the data')
     infoMessage(getLineNumber(), 'initializing loss arrays')
 
-    """ 
-    loss_array = []
-    # lpips_loss_array = []
-    secret_loss_array = []
-    D_loss_array = []
-    """
-
     while global_step < args.num_steps:
         for _ in range(min(total_steps, args.num_steps - global_step)):
             image_input, secret_input = next(iter(dataloader))
