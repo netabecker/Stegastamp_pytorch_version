@@ -9,6 +9,7 @@ from torchvision import transforms
 
 BCH_POLYNOMIAL = 137
 BCH_BITS = 5
+VERBOSE = 0
 
 def main():
     import argparse
@@ -55,25 +56,24 @@ def main():
             secret = np.array(secret[0])
             secret = np.round(secret)
 
-            infoMessage(getLineNumber(), f'secret = {secret}')
+            infoMessage(getLineNumber(), f'secret = {secret}', VERBOSE)
 
             packet_binary = "".join([str(int(bit)) for bit in secret[:96]])
-            infoMessage(getLineNumber(), f'packet binary = {packet_binary}')
+            infoMessage(getLineNumber(), f'packet binary = {packet_binary}', VERBOSE)
             packet = bytes(int(packet_binary[i: i + 8], 2) for i in range(0, len(packet_binary), 8))
             packet = bytearray(packet)
-            infoMessage(getLineNumber(), f'packet = {packet}')
+            infoMessage(getLineNumber(), f'packet = {packet}', VERBOSE)
 
             data, ecc = packet[:-bch.ecc_bytes], packet[-bch.ecc_bytes:]
 
-            infoMessage(getLineNumber(), f'bch.ecc_bytes = {bch.ecc_bytes}')
-            infoMessage(getLineNumber(), f'data = {data}')
-            infoMessage(getLineNumber(), f'len(data) = {len(data)}')
-            infoMessage(getLineNumber(), f'ecc = {ecc}')
-            infoMessage(getLineNumber(), f'len(ecc) = {len(ecc)}')
+            infoMessage(getLineNumber(), f'bch.ecc_bytes = {bch.ecc_bytes}', VERBOSE)
+            infoMessage(getLineNumber(), f'data = {data}', VERBOSE)
+            infoMessage(getLineNumber(), f'len(data) = {len(data)}', VERBOSE)
+            infoMessage(getLineNumber(), f'ecc = {ecc}', VERBOSE)
+            infoMessage(getLineNumber(), f'len(ecc) = {len(ecc)}', VERBOSE)
 
             bitflips = bch.decode_inplace(data, ecc)
-            infoMessage(getLineNumber(), f'bitflips = {bitflips}')
-            print(f'bitflips: {bitflips}')    # debug
+            infoMessage(getLineNumber(), f'bitflips = {bitflips}', VERBOSE)
             if bitflips != -1:
                 try:
                     code = data.decode("utf-8")

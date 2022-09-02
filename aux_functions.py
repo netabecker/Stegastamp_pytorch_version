@@ -8,8 +8,9 @@ def getLineNumber():
     return currentframe().f_back.f_lineno
 
 
-def infoMessage(line, string):
-    print(f'[line {line}]: {string}')
+def infoMessage(line, string, verbose=0):
+    if verbose == 1:
+        print(f'[line {line}]: {string}')
 
 def infoMessage0(string):
     print(f'[-----]: {string}')
