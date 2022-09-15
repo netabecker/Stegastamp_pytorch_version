@@ -1,9 +1,9 @@
 
 #train_path: 'F:\\VOCdevkit\\VOC2012\\JPEGImages'
 train_path: '/home/netadan/Desktop/data/Pascal/VOCdevkit/VOC2012/JPEGImages/'
-logs_path: "./logs/logs_loss_scale_2-4_35K_lpips"
-checkpoints_path: './checkpoints_loss_scale_2-4_35K_lpips/'
-saved_models: './saved_models_loss_scale_2-4_35K_lpips'
+logs_path: "./logs/logs_loss_scale_3_35K_lpips"
+checkpoints_path: './checkpoints_loss_scale_3_35K_lpips/'
+saved_models: './saved_models_loss_scale_3_35K_lpips'
 
 cuda: True
 
@@ -19,7 +19,7 @@ l2_edge_ramp: 10000
 l2_edge_delay: 80000
 lpips_loss_scale: 1.5
 lpips_loss_ramp: 15000
-secret_loss_scale: 2.4 # giving bigger weight to the encryption of the code
+secret_loss_scale: 3 # giving bigger weight to the encryption of the code
 secret_loss_ramp: 1
 G_loss_scale: 0.5
 G_loss_ramp: 15000
