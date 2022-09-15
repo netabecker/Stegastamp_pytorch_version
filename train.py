@@ -146,7 +146,8 @@ def main():
                     optimize_dis.step()
             """
 
-            print('[secret_loss={:g}] {:g}: Loss = {:.4f}'.format(args.secret_loss_scale, global_step, loss))
+            if global_step % 10 == 0:
+                print('[secret_loss={:g}] {:g}: Loss = {:.4f}'.format(args.secret_loss_scale, global_step, loss))
 
             writer.add_scalars('Loss values', {'loss': loss.item(), 'secret loss': secret_loss.item(),
                                                'D_loss loss': D_loss.item()})

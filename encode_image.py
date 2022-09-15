@@ -87,15 +87,30 @@ def main():
                     image = image.cuda()
 
                 residual = encoder((secret, image))
+                # check if the image is empty:
+                extrema = residual.convert("L").getextrema()
+                if extrema[0] == extrema[1]:
+                    infoMessage(getLineNumber(), "ERROR: The residual is empty. Exiting.")
+
                 encoded = image + residual
                 if args.cuda:
                     residual = residual.cpu()
                     encoded = encoded.cpu()
-                # todo: clip those values before casting to uint8
+
+                # checking if need to trim
+                # todo: check if trimming is needed
+                for value in encoded:
+                    if value > 1:
+                        infoMessage(getLineNumber(), "there is a value greater than 255 - we need to trim")
+                        value = 1
+                    elif value < 0:
+                        infoMessage(getLineNumber(), "there is a value smaller than 0 - we need to trim")
+                        value = 0
+
                 encoded = np.array(encoded.squeeze(0) * 255, dtype=np.uint8).transpose((1, 2, 0))  # todo: check if the values are not being trimmed here
 
                 residual = residual[0] + .5
-                residual = np.array(residual.squeeze(0) * 255, dtype=np.uint8).transpose((1, 2, 0))  # todo: check if the values are not being trimmed here
+                residual = np.array(residual.squeeze(0) * 255, dtype=np.uint8).transpose((1, 2, 0))
 
                 save_name = os.path.basename(filename).split('.')[0]
 

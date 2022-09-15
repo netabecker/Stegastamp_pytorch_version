@@ -278,8 +278,6 @@ def build_model(encoder, decoder, discriminator, lpips_fn, secret_input, image_i
 
     residual = torchgeometry.warp_perspective(residual_warped, M[:, 0, :, :], dsize=(400, 400), flags='bilinear')
 
-    # infoMessage(f'borders == {borders}. Setting to "no_edge"')
-    borders = 'no_edge'
     if borders == 'no_edge':
         encoded_image = image_input + residual
     elif borders == 'black':
