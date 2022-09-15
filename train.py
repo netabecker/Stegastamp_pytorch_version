@@ -67,14 +67,25 @@ def main():
     infoMessage(getLineNumber(), 'initializing loss arrays')
 
     while global_step < args.num_steps:
+
+        #  Nets usually workd better on [-1,1] values. train the net on those values - remove the casting to uint8,
+        #  use float of [0,1] or [-1,1]. In test time - show it from [0,1] or [0,255].
+        #  Basicaly - most nets work better with analog values rather than digital.
+        #  IMPORTANT: it shouldnt give better results - but it's worth a shot
+
         for _ in range(min(total_steps, args.num_steps - global_step)):
             image_input, secret_input = next(iter(dataloader))
             if args.cuda:
                 image_input = image_input.cuda()
                 secret_input = secret_input.cuda()
             no_im_loss = global_step < args.no_im_loss_steps
+
+            # residual loss
             l2_loss_scale = min(args.l2_loss_scale * global_step / args.l2_loss_ramp, args.l2_loss_scale)
-            # lpips_loss_scale = min(args.lpips_loss_scale * global_step / args.lpips_loss_ramp, args.lpips_loss_scale)
+
+            lpips_loss_scale = min(args.lpips_loss_scale * global_step / args.lpips_loss_ramp, args.lpips_loss_scale)
+
+            # message loss
             secret_loss_scale = min(args.secret_loss_scale * global_step / args.secret_loss_ramp,
                                     args.secret_loss_scale)
             # G_loss_scale = min(args.G_loss_scale * global_step / args.G_loss_ramp, args.G_loss_scale)
@@ -93,7 +104,7 @@ def main():
 
             """ New version - after removing all loss scales"""
 
-            loss_scales = [l2_loss_scale, 0, secret_loss_scale, 0]  # setting the weight to 0 of unknown losses
+            loss_scales = [l2_loss_scale, lpips_loss_scale, secret_loss_scale, 0]  # [l2_loss_scale, lpips_loss_scale, secret_loss_scale, G_loss_scale]
             yuv_scales = [args.y_scale, args.u_scale, args.v_scale]
             loss, secret_loss, D_loss, bit_acc, str_acc = model.build_model(encoder, decoder, discriminator, lpips_alex,
                                                                             secret_input, image_input,

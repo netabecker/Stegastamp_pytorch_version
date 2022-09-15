@@ -352,6 +352,7 @@ def build_model(encoder, decoder, discriminator, lpips_fn, secret_input, image_i
     yuv_scales = torch.Tensor(yuv_scales)
     if args.cuda:
         yuv_scales = yuv_scales.cuda()
+    # todo: figure out the difference between this and the l2 loss.
     image_loss = torch.dot(yuv_loss, yuv_scales)
 
     D_loss = D_output_real - D_output_fake
