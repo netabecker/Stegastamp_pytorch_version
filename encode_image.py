@@ -82,32 +82,33 @@ def main():
                 infoMessage(getLineNumber(), 'convert photo to RGB, and convert to tensor')
                 image = Image.open(filename).convert("RGB")
                 image = ImageOps.fit(image, size)
+
+                # im = Image.fromarray(image)
+                save_name = os.path.basename(filename).split('.')[0]
+                image.save(args.save_dir + '/' + save_name + '.png')
+
                 image = to_tensor(image).unsqueeze(0)
                 if args.cuda:
                     image = image.cuda()
 
                 residual = encoder((secret, image))
-                # check if the image is empty:
-                extrema = residual.convert("L").getextrema()
-                if extrema[0] == extrema[1]:
-                    infoMessage(getLineNumber(), "ERROR: The residual is empty. Exiting.")
 
                 encoded = image + residual
                 if args.cuda:
                     residual = residual.cpu()
                     encoded = encoded.cpu()
 
-                # checking if need to trim
-                # todo: check if trimming is needed
-                for value in encoded:
-                    if value > 1:
-                        infoMessage(getLineNumber(), "there is a value greater than 255 - we need to trim")
-                        value = 1
-                    elif value < 0:
-                        infoMessage(getLineNumber(), "there is a value smaller than 0 - we need to trim")
-                        value = 0
+                encoded = np.array(encoded.squeeze(0) * 255).transpose((1, 2, 0))  # todo: check if the values are not being trimmed here
+                for x in range(encoded.shape[0]):
+                    for y in range(encoded.shape[1]):
+                        if encoded[x][y][0] > 255:
+                            encoded[x][y][0] = 255
+                        if encoded[x][y][1] > 255:
+                            encoded[x][y][1] = 255
+                        if encoded[x][y][2] > 255:
+                            encoded[x][y][2] = 255
 
-                encoded = np.array(encoded.squeeze(0) * 255, dtype=np.uint8).transpose((1, 2, 0))  # todo: check if the values are not being trimmed here
+                encoded = encoded.astype(np.uint8)
 
                 residual = residual[0] + .5
                 residual = np.array(residual.squeeze(0) * 255, dtype=np.uint8).transpose((1, 2, 0))

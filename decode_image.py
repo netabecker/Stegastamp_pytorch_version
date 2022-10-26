@@ -43,7 +43,7 @@ def main():
 
     with torch.no_grad():
         for filename in files_list:
-            if 'residual' in filename:
+            if 'hidden' not in filename:
                 continue
             image = Image.open(filename).convert("RGB")
             image = ImageOps.fit(image, size)

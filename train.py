@@ -102,31 +102,7 @@ def main():
             if args.cuda:
                 Ms = Ms.cuda()
 
-            """ New version - after removing all loss scales"""
-
-            loss_scales = [l2_loss_scale, lpips_loss_scale, secret_loss_scale, 0]  # [l2_loss_scale, lpips_loss_scale, secret_loss_scale, G_loss_scale]
-            yuv_scales = [args.y_scale, args.u_scale, args.v_scale]
-            loss, secret_loss, D_loss, bit_acc, str_acc = model.build_model(encoder, decoder, discriminator, lpips_alex,
-                                                                            secret_input, image_input,
-                                                                            args.l2_edge_gain, args.borders,
-                                                                            args.secret_size, Ms, loss_scales,
-                                                                            yuv_scales, args, global_step, writer)
-
-            if no_im_loss:
-                optimize_secret_loss.zero_grad()
-                secret_loss.backward()
-                optimize_secret_loss.step()
-            else:
-                optimize_loss.zero_grad()
-                loss.backward()
-                optimize_loss.step()
-                if not args.no_gan:
-                    optimize_dis.zero_grad()
-                    optimize_dis.step()
-
-            # ------> PREVIOUS VERSION - BEFORE REMOVING ALL DIFFERENT LOSSES
-            """
-            loss_scales = [l2_loss_scale, lpips_loss_scale, secret_loss_scale, G_loss_scale]
+            loss_scales = [l2_loss_scale, lpips_loss_scale, secret_loss_scale, 0] # [l2_loss_scale, lpips_loss_scale, secret_loss_scale, G_loss_scale]
             yuv_scales = [args.y_scale, args.u_scale, args.v_scale]
             loss, secret_loss, D_loss, bit_acc, str_acc = model.build_model(encoder, decoder, discriminator, lpips_alex,
                                                                             secret_input, image_input,
@@ -144,25 +120,15 @@ def main():
                 if not args.no_gan:
                     optimize_dis.zero_grad()
                     optimize_dis.step()
-            """
+
 
             if global_step % 10 == 0:
-                print('[secret_loss={:g}] {:g}: Loss = {:.4f}'.format(args.secret_loss_scale, global_step, loss))
+                print('[secret_loss={:g}] [lpips_loss={:g}] - {:g}: Loss = {:.4f}'.format(
+                    args.secret_loss_scale, lpips_loss_scale, global_step, loss))
 
             writer.add_scalars('Loss values', {'loss': loss.item(), 'secret loss': secret_loss.item(),
                                                'D_loss loss': D_loss.item()})
 
-            """ 
-            ---> Create graphs localy
-            
-            loss_array.append(loss.item())
-            secret_loss_array.append(secret_loss.item())
-            D_loss_array.append(D_loss.item())
-
-            if (global_step > 1000 and global_step % 5000 == 0) or (global_step < 5000 and global_step % 1000 == 0):
-                infoMessage(getLineNumber(), f'loss type: {loss.type()}')
-                graph_create(global_step, loss_array, secret_loss_array, D_loss_array, graph_labels_created)
-            """
     writer.close()
     torch.save(encoder, os.path.join(args.saved_models, "encoder.pth"))
     torch.save(decoder, os.path.join(args.saved_models, "decoder.pth"))

@@ -4,7 +4,7 @@ import glob
 import bchlib
 import numpy as np
 from PIL import Image, ImageOps
-
+import cv2
 import torch
 from torchvision import transforms
 
@@ -17,15 +17,32 @@ Defined:   BCH_POLYNOMIAL = {BCH_POLYNOMIAL}    BCH_BITS = {BCH_BITS}')
 
 def main():
     import argparse
-    parser = argparse.ArgumentParser()
-    parser.add_argument('model', type=str)
-    parser.add_argument('--image', type=str, default=None)
-    parser.add_argument('--images_dir', type=str, default=None)
-    parser.add_argument('--save_dir', type=str, default=r'./images')
-    parser.add_argument('--secret', type=str, default='Stega!!')
-    parser.add_argument('--secret_size', type=int, default=7)  # changed from 100 to 7
-    parser.add_argument('--cuda', type=bool, default=True)
-    args = parser.parse_args()
+
+    # parser = argparse.ArgumentParser()
+    # parser.add_argument('model', type=str)
+    # parser.add_argument('--image', type=str, default=None)
+    # parser.add_argument('--images_dir', type=str, default=None)
+    # parser.add_argument('--save_dir', type=str, default=r'./images')
+    # parser.add_argument('--secret', type=str, default='Stega!!')
+    # parser.add_argument('--secret_size', type=int, default=7)  # changed from 100 to 7
+    # parser.add_argument('--cuda', type=bool, default=True)
+    # args = parser.parse_args()
+
+    image = cv2.imread('small_images_dir/2012_001586.jpg')
+    hsvImage = cv2.cvtColor(image, cv2.COLOR_BGR2HSV)
+
+    # cv2.imshow('Original image', image)
+    # Filename
+    filename = 'hsv_image.jpg'
+
+    # Using cv2.imwrite() method
+    # Saving the image
+    cv2.imwrite(filename, image)
+
+    cv2.imwrite(filename, hsvImage)
+
+
+    exit(0)
 
     if args.image is not None:
         files_list = [args.image]
@@ -88,7 +105,7 @@ def main():
                 if args.cuda:
                     residual = residual.cpu()
                     encoded = encoded.cpu()
-                encoded = np.array(encoded.squeeze(0) * 255, dtype=np.uint8).transpose((1, 2, 0))
+                encoded = np.array(encoded.squeeze(0) * 255, dtype=np.uint8).transpose((1, 2, 0))  # check if the values are not being trimmed here
 
                 # infoMessage(getLineNumber(), f'residual[0]: {residual[0]}')
 

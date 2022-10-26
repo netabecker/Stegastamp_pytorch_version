@@ -224,7 +224,7 @@ def transform_net(encoded_image, args, global_step):
     noise = torch.normal(mean=0, std=rnd_noise, size=encoded_image.size(), dtype=torch.float32)
     if args.cuda:
         noise = noise.cuda()
-    encoded_image = encoded_image + noise
+    encoded_image = encoded_image + noise # todo: consider removing it
     encoded_image = torch.clamp(encoded_image, 0, 1)
 
     # contrast & brightness
@@ -269,8 +269,7 @@ def build_model(encoder, decoder, discriminator, lpips_fn, secret_input, image_i
     test_transform = transform_net(image_input, args, global_step)
 
     input_warped = torchgeometry.warp_perspective(image_input, M[:, 1, :, :], dsize=(400, 400), flags='bilinear')
-    mask_warped = torchgeometry.warp_perspective(torch.ones_like(input_warped), M[:, 1, :, :], dsize=(400, 400),
-                                                 flags='bilinear')
+    mask_warped = torchgeometry.warp_perspective(torch.ones_like(input_warped), M[:, 1, :, :], dsize=(400, 400), flags='bilinear')
     input_warped += (1 - mask_warped) * image_input
 
     residual_warped = encoder((secret_input, input_warped))
@@ -308,7 +307,7 @@ def build_model(encoder, decoder, discriminator, lpips_fn, secret_input, image_i
 
     if borders == 'no_edge':
         D_output_real, _ = discriminator(image_input)
-        D_output_fake, D_heatmap = discriminator(encoded_image)
+        D_output_fake, D_heatmap = discriminator(encoded_image)]\
     else:
         D_output_real, _ = discriminator(input_warped)
         D_output_fake, D_heatmap = discriminator(encoded_warped)
@@ -369,8 +368,8 @@ def build_model(encoder, decoder, discriminator, lpips_fn, secret_input, image_i
     writer.add_scalar('metric/str_acc', str_acc, global_step)
     if global_step % 20 == 0:
         writer.add_image('input/image_input', image_input[0], global_step)
-        writer.add_image('input/image_warped', input_warped[0], global_step)
-        writer.add_image('encoded/encoded_warped', encoded_warped[0], global_step)
+        # writer.add_image('input/image_warped', input_warped[0], global_step)
+        # writer.add_image('encoded/encoded_warped', encoded_warped[0], global_step)
         writer.add_image('encoded/residual_warped', residual_warped[0] + 0.5, global_step)
         writer.add_image('encoded/encoded_image', encoded_image[0], global_step)
         writer.add_image('transformed/transformed_image', transformed_image[0], global_step)
