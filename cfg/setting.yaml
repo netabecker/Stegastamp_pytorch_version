@@ -1,9 +1,9 @@
 
 #train_path: 'F:\\VOCdevkit\\VOC2012\\JPEGImages'
 train_path: '/home/netadan/Desktop/data/Pascal/VOCdevkit/VOC2012/JPEGImages/'
-logs_path: "./logs/current/secret_2.35_lpips_0.005_140K"
-checkpoints_path: './checkpoints_secret_2.35_lpips_0.005_140K/'
-saved_models: './saved_models_secret_2.35_lpips_0.005_140K'
+logs_path: "./logs/current/hsv_005_120K"
+checkpoints_path: './checkpoints_hsv_005_120K/'
+saved_models: './saved_models_hsv_005_120K'
 
 cuda: True
 
@@ -17,7 +17,7 @@ l2_loss_ramp: 15000
 l2_edge_gain: 10
 l2_edge_ramp: 10000
 l2_edge_delay: 80000
-lpips_loss_scale: 0
+lpips_loss_scale: 0.001
 lpips_loss_ramp: 15000
 secret_loss_scale: 2.4
 secret_loss_ramp: 1
@@ -27,6 +27,9 @@ borders: 'no_edge' # choices=['no_edge','black','random','randomrgb','image','wh
 y_scale: 1
 u_scale: 100
 v_scale: 100
+hsv_h_scale: 0
+hsv_s_scale: 0
+hsv_v_scale: 5
 no_gan: True
 rnd_trans: 0.1
 rnd_bri: 0.3
@@ -46,3 +49,5 @@ contrast_ramp: 1000
 jpeg_quality_ramp: 1000
 no_im_loss_steps: 1500
 pretrained: None
+
+# todo 0911: maybe try training with [1,1,1] first with HSV - look at the loss and conclude from that. there's no reason that the loss will get as big as it does.

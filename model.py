@@ -265,7 +265,7 @@ def get_secret_acc(secret_true, secret_pred):
 
 
 def build_model(encoder, decoder, discriminator, lpips_fn, secret_input, image_input, l2_edge_gain,
-                borders, secret_size, M, loss_scales, yuv_scales, args, global_step, writer):
+                borders, secret_size, M, loss_scales, hsv_scales, args, global_step, writer):
     test_transform = transform_net(image_input, args, global_step)
 
     input_warped = torchgeometry.warp_perspective(image_input, M[:, 1, :, :], dsize=(400, 400), flags='bilinear')
@@ -307,7 +307,7 @@ def build_model(encoder, decoder, discriminator, lpips_fn, secret_input, image_i
 
     if borders == 'no_edge':
         D_output_real, _ = discriminator(image_input)
-        D_output_fake, D_heatmap = discriminator(encoded_image)]\
+        D_output_fake, D_heatmap = discriminator(encoded_image)
     else:
         D_output_real, _ = discriminator(input_warped)
         D_output_fake, D_heatmap = discriminator(encoded_warped)
@@ -341,19 +341,33 @@ def build_model(encoder, decoder, discriminator, lpips_fn, secret_input, image_i
         falloff_im = falloff_im.cuda()
     falloff_im *= l2_edge_gain
 
-    encoded_image_yuv = color.rgb_to_yuv(encoded_image)
-    image_input_yuv = color.rgb_to_yuv(image_input)
-    im_diff = encoded_image_yuv - image_input_yuv
+    # -------> Removed YUV calculation
+    # encoded_image_yuv = color.rgb_to_yuv(encoded_image)
+    # image_input_yuv = color.rgb_to_yuv(image_input)
+    # im_diff = encoded_image_yuv - image_input_yuv
+    # im_diff += im_diff * falloff_im.unsqueeze_(0)
+    # yuv_loss = torch.mean((im_diff) ** 2, axis=[0, 2, 3])
+    # yuv_scales = torch.Tensor(yuv_scales)
+    # if args.cuda:
+    #     yuv_scales = yuv_scales.cuda()
+    # image_loss = torch.dot(yuv_loss, yuv_scales)
+
+    # -------> Switched to HSV loss scale
+    encoded_image_hsv = color.rgb_to_hsv(torch.clamp(encoded_image, 0, 1))
+    image_input_hsv = color.rgb_to_hsv(image_input)
+    encoded_image_hsv[:, 0, :, :] = encoded_image_hsv[:, 0, :, :] / (2 * np.pi)
+    image_input_hsv[:, 0, :, :] = image_input_hsv[:, 0, :, :] / (2 * np.pi)
+    im_diff = encoded_image_hsv - image_input_hsv
     im_diff += im_diff * falloff_im.unsqueeze_(0)
-    yuv_loss = torch.mean((im_diff) ** 2, axis=[0, 2, 3])
-    yuv_scales = torch.Tensor(yuv_scales)
+    hsv_loss = torch.mean((im_diff) ** 2, axis=[0, 2, 3])
+    hsv_scales = torch.Tensor(hsv_scales)
     if args.cuda:
-        yuv_scales = yuv_scales.cuda()
-    # todo: figure out the difference between this and the l2 loss.
-    image_loss = torch.dot(yuv_loss, yuv_scales)
+        hsv_scales = hsv_scales.cuda()
+    image_loss = torch.dot(hsv_loss, hsv_scales)
 
     D_loss = D_output_real - D_output_fake
-    G_loss = D_output_fake  # todo: figure out what it means
+    G_loss = D_output_fake
+
     loss = loss_scales[0] * image_loss + loss_scales[1] * lpips_loss + loss_scales[2] * secret_loss
     if not args.no_gan:
         loss += loss_scales[3] * G_loss

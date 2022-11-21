@@ -103,12 +103,13 @@ def main():
                 Ms = Ms.cuda()
 
             loss_scales = [l2_loss_scale, lpips_loss_scale, secret_loss_scale, 0] # [l2_loss_scale, lpips_loss_scale, secret_loss_scale, G_loss_scale]
-            yuv_scales = [args.y_scale, args.u_scale, args.v_scale]
+            # yuv_scales = [args.y_scale, args.u_scale, args.v_scale]
+            hsv_scales = [args.hsv_h_scale, args.hsv_s_scale, args.hsv_v_scale]
             loss, secret_loss, D_loss, bit_acc, str_acc = model.build_model(encoder, decoder, discriminator, lpips_alex,
                                                                             secret_input, image_input,
                                                                             args.l2_edge_gain, args.borders,
                                                                             args.secret_size, Ms, loss_scales,
-                                                                            yuv_scales, args, global_step, writer)
+                                                                            hsv_scales, args, global_step, writer)
             if no_im_loss:
                 optimize_secret_loss.zero_grad()
                 secret_loss.backward()
@@ -123,8 +124,8 @@ def main():
 
 
             if global_step % 10 == 0:
-                print('[secret_loss={:g}] [lpips_loss={:g}] - {:g}: Loss = {:.4f}'.format(
-                    args.secret_loss_scale, lpips_loss_scale, global_step, loss))
+                print('[secret_loss={:g}] - {:g}: Loss = {:.4f}'.format(
+                    args.secret_loss_scale, global_step, loss))
 
             writer.add_scalars('Loss values', {'loss': loss.item(), 'secret loss': secret_loss.item(),
                                                'D_loss loss': D_loss.item()})
