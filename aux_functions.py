@@ -2,8 +2,9 @@ from inspect import currentframe
 
 import numpy as np
 from matplotlib import pyplot as plt
+import torch
 
-
+print(f'Imported aux_functions library')
 def getLineNumber():
     return currentframe().f_back.f_lineno
 
@@ -71,4 +72,11 @@ def create_graph_secret_loss(num_steps, secret_loss, D_loss, labels_created):
     plt.legend()
     plt.savefig(f'loss_graphs/1208_version/graph_iterations_secret_loss_{num_steps}')
 
+
+def check_memory_stat():
+    total_mem = torch.cuda.get_device_properties(0).total_memory
+    reserved_mem = torch.cuda.memory_reserved(0)
+    allocated_mem = torch.cuda.memory_allocated(0)
+    free_mem = reserved_mem - allocated_mem  # free inside reserved
+    print(f'total memory = {total_mem:,} || memory reserved = {reserved_mem:,} || memory allocated = {allocated_mem:,} || free memory = {free_mem:,}')
 

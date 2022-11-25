@@ -9,26 +9,11 @@ from torch import nn
 import torchgeometry
 from kornia import color
 import torch.nn.functional as F
-from torchvision import transforms
 import warnings
 warnings.filterwarnings('ignore')
-
-""" ----------------------> Helper functions: """
-from inspect import currentframe
+from torchvision import transforms
 
 
-def getLineNumber():
-    cf = currentframe()
-    return cf.f_back.f_lineno
-
-def infoMessage(string):
-    print(f'[line {getLineNumber()}]: {string}')
-
-
-""" ----------------------> End of helper functions """
-
-
-infoMessage(f'{currentframe().f_back.f_lineno} Model - class dense')
 class Dense(nn.Module):
     def __init__(self, in_features, out_features, activation='relu', kernel_initializer='he_normal'):
         super(Dense, self).__init__()
@@ -51,7 +36,7 @@ class Dense(nn.Module):
                 outputs = nn.ReLU(inplace=True)(outputs)
         return outputs
 
-infoMessage('Model - class Conv2D')
+
 class Conv2D(nn.Module):
     def __init__(self, in_channels, out_channels, kernel_size=3, activation='relu', strides=1):
         super(Conv2D, self).__init__()
@@ -83,11 +68,11 @@ class Flatten(nn.Module):
         return input.view(input.size(0), -1)
 
 
-infoMessage(f'{currentframe().f_back.f_lineno} Model - class StegaStamp Encoder')
 class StegaStampEncoder(nn.Module):
     def __init__(self):
         super(StegaStampEncoder, self).__init__()
         self.secret_dense = Dense(100, 7500, activation='relu', kernel_initializer='he_normal')
+
         self.conv1 = Conv2D(6, 32, 3, activation='relu')
         self.conv2 = Conv2D(32, 32, 3, activation='relu', strides=2)
         self.conv3 = Conv2D(32, 64, 3, activation='relu', strides=2)
@@ -224,7 +209,7 @@ def transform_net(encoded_image, args, global_step):
     noise = torch.normal(mean=0, std=rnd_noise, size=encoded_image.size(), dtype=torch.float32)
     if args.cuda:
         noise = noise.cuda()
-    encoded_image = encoded_image + noise # todo: consider removing it
+    encoded_image = encoded_image + noise
     encoded_image = torch.clamp(encoded_image, 0, 1)
 
     # contrast & brightness
@@ -265,11 +250,12 @@ def get_secret_acc(secret_true, secret_pred):
 
 
 def build_model(encoder, decoder, discriminator, lpips_fn, secret_input, image_input, l2_edge_gain,
-                borders, secret_size, M, loss_scales, hsv_scales, args, global_step, writer):
+                borders, secret_size, M, loss_scales, yuv_scales, hsv_scales, args, global_step, writer):
     test_transform = transform_net(image_input, args, global_step)
 
     input_warped = torchgeometry.warp_perspective(image_input, M[:, 1, :, :], dsize=(400, 400), flags='bilinear')
-    mask_warped = torchgeometry.warp_perspective(torch.ones_like(input_warped), M[:, 1, :, :], dsize=(400, 400), flags='bilinear')
+    mask_warped = torchgeometry.warp_perspective(torch.ones_like(input_warped), M[:, 1, :, :], dsize=(400, 400),
+                                                 flags='bilinear')
     input_warped += (1 - mask_warped) * image_input
 
     residual_warped = encoder((secret_input, input_warped))
@@ -341,7 +327,7 @@ def build_model(encoder, decoder, discriminator, lpips_fn, secret_input, image_i
         falloff_im = falloff_im.cuda()
     falloff_im *= l2_edge_gain
 
-    # -------> Removed YUV calculation
+    # YUV loss
     # encoded_image_yuv = color.rgb_to_yuv(encoded_image)
     # image_input_yuv = color.rgb_to_yuv(image_input)
     # im_diff = encoded_image_yuv - image_input_yuv
@@ -352,11 +338,12 @@ def build_model(encoder, decoder, discriminator, lpips_fn, secret_input, image_i
     #     yuv_scales = yuv_scales.cuda()
     # image_loss = torch.dot(yuv_loss, yuv_scales)
 
-    # -------> Switched to HSV loss scale
-    encoded_image_hsv = color.rgb_to_hsv(torch.clamp(encoded_image, 0, 1))
+    # HSV loss
+    encoded_image_hsv = color.rgb_to_hsv(torch.clamp(encoded_image,0,1))
     image_input_hsv = color.rgb_to_hsv(image_input)
-    encoded_image_hsv[:, 0, :, :] = encoded_image_hsv[:, 0, :, :] / (2 * np.pi)
-    image_input_hsv[:, 0, :, :] = image_input_hsv[:, 0, :, :] / (2 * np.pi)
+    # normalizing the values --> Elad suggested that we'll remove it
+    # encoded_image_hsv[:, 0, :, :] = encoded_image_hsv[:, 0, :, :] / (2 * np.pi)
+    # image_input_hsv[:, 0, :, :] = image_input_hsv[:, 0, :, :] / (2 * np.pi)
     im_diff = encoded_image_hsv - image_input_hsv
     im_diff += im_diff * falloff_im.unsqueeze_(0)
     hsv_loss = torch.mean((im_diff) ** 2, axis=[0, 2, 3])
@@ -382,8 +369,8 @@ def build_model(encoder, decoder, discriminator, lpips_fn, secret_input, image_i
     writer.add_scalar('metric/str_acc', str_acc, global_step)
     if global_step % 20 == 0:
         writer.add_image('input/image_input', image_input[0], global_step)
-        # writer.add_image('input/image_warped', input_warped[0], global_step)
-        # writer.add_image('encoded/encoded_warped', encoded_warped[0], global_step)
+        writer.add_image('input/image_warped', input_warped[0], global_step)
+        writer.add_image('encoded/encoded_warped', encoded_warped[0], global_step)
         writer.add_image('encoded/residual_warped', residual_warped[0] + 0.5, global_step)
         writer.add_image('encoded/encoded_image', encoded_image[0], global_step)
         writer.add_image('transformed/transformed_image', transformed_image[0], global_step)

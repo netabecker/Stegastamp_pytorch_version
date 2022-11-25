@@ -1,12 +1,7 @@
-from aux_functions import *
-
-infoMessage(getLineNumber(), 'Successfully imported aux lib')
-from inspect import currentframe
 import os
 import yaml
 import random
 import model
-# import model_by_tensor as model
 import numpy as np
 from glob import glob
 from easydict import EasyDict
@@ -18,6 +13,7 @@ import torch
 from torch.utils.data import DataLoader
 from torch.utils.tensorboard import SummaryWriter
 import lpips
+import aux_functions
 
 with open('cfg/setting.yaml', 'r') as f:
     args = EasyDict(yaml.load(f, Loader=yaml.SafeLoader))
@@ -30,11 +26,9 @@ if not os.path.exists(args.saved_models):
 
 
 def main():
-    infoMessage(getLineNumber(), 'Beginning of main')
     log_path = os.path.join(args.logs_path, str(args.exp_name))
     writer = SummaryWriter(log_path)
 
-    infoMessage(getLineNumber(), 'Loading the data')
     dataset = StegaData(args.train_path, args.secret_size, size=(400, 400))
     dataloader = DataLoader(dataset, batch_size=args.batch_size, shuffle=True, pin_memory=True)
 
@@ -43,7 +37,6 @@ def main():
     discriminator = model.Discriminator()
     lpips_alex = lpips.LPIPS(net="alex", verbose=False)
     if args.cuda:
-        infoMessage(getLineNumber(), 'Cuda = True')
         encoder = encoder.cuda()
         decoder = decoder.cuda()
         discriminator = discriminator.cuda()
@@ -63,33 +56,20 @@ def main():
     total_steps = len(dataset) // args.batch_size + 1
     global_step = 0
 
-    infoMessage(getLineNumber(), 'Running over the data')
-    infoMessage(getLineNumber(), 'initializing loss arrays')
-
     while global_step < args.num_steps:
-
-        #  Nets usually workd better on [-1,1] values. train the net on those values - remove the casting to uint8,
-        #  use float of [0,1] or [-1,1]. In test time - show it from [0,1] or [0,255].
-        #  Basicaly - most nets work better with analog values rather than digital.
-        #  IMPORTANT: it shouldnt give better results - but it's worth a shot
-
         for _ in range(min(total_steps, args.num_steps - global_step)):
             image_input, secret_input = next(iter(dataloader))
             if args.cuda:
                 image_input = image_input.cuda()
                 secret_input = secret_input.cuda()
             no_im_loss = global_step < args.no_im_loss_steps
-
-            # residual loss
             l2_loss_scale = min(args.l2_loss_scale * global_step / args.l2_loss_ramp, args.l2_loss_scale)
-
             lpips_loss_scale = min(args.lpips_loss_scale * global_step / args.lpips_loss_ramp, args.lpips_loss_scale)
+            secret_loss_scale = min(args.secret_loss_scale * global_step / args.secret_loss_ramp,args.secret_loss_scale)
+            #secret_loss_scale = (args.secret_loss_scale * global_step / args.secret_loss_ramp)
 
-            # message loss
-            secret_loss_scale = min(args.secret_loss_scale * global_step / args.secret_loss_ramp,
-                                    args.secret_loss_scale)
-            # G_loss_scale = min(args.G_loss_scale * global_step / args.G_loss_ramp, args.G_loss_scale)
-            # l2_edge_gain = 0
+            #G_loss_scale = min(args.G_loss_scale * global_step / args.G_loss_ramp, args.G_loss_scale)
+            #l2_edge_gain = 0
             # if global_step > args.l2_edge_delay:
             #     l2_edge_gain = min(args.l2_edge_gain * (global_step - args.l2_edge_delay) / args.l2_edge_ramp,
             #                        args.l2_edge_gain)
@@ -102,14 +82,15 @@ def main():
             if args.cuda:
                 Ms = Ms.cuda()
 
-            loss_scales = [l2_loss_scale, lpips_loss_scale, secret_loss_scale, 0] # [l2_loss_scale, lpips_loss_scale, secret_loss_scale, G_loss_scale]
-            # yuv_scales = [args.y_scale, args.u_scale, args.v_scale]
+            #loss_scales = [l2_loss_scale, lpips_loss_scale, secret_loss_scale, G_loss_scale]
+            loss_scales = [l2_loss_scale,lpips_loss_scale, secret_loss_scale,0]
+            yuv_scales = [args.y_scale, args.u_scale, args.v_scale]
             hsv_scales = [args.hsv_h_scale, args.hsv_s_scale, args.hsv_v_scale]
             loss, secret_loss, D_loss, bit_acc, str_acc = model.build_model(encoder, decoder, discriminator, lpips_alex,
                                                                             secret_input, image_input,
                                                                             args.l2_edge_gain, args.borders,
                                                                             args.secret_size, Ms, loss_scales,
-                                                                            hsv_scales, args, global_step, writer)
+                                                                            yuv_scales, hsv_scales, args, global_step, writer)
             if no_im_loss:
                 optimize_secret_loss.zero_grad()
                 secret_loss.backward()
@@ -122,13 +103,13 @@ def main():
                     optimize_dis.zero_grad()
                     optimize_dis.step()
 
-
             if global_step % 10 == 0:
-                print('[secret_loss={:g}] - {:g}: Loss = {:.4f}'.format(
-                    args.secret_loss_scale, global_step, loss))
-
-            writer.add_scalars('Loss values', {'loss': loss.item(), 'secret loss': secret_loss.item(),
+                print('{:g}: Loss = {:.4f}'.format(global_step, loss))
+                writer.add_scalars('Loss values', {'loss': loss.item(), 'secret loss': secret_loss.item(),
                                                'D_loss loss': D_loss.item()})
+
+            if global_step % 100 == 0:
+                aux_functions.check_memory_stat()
 
     writer.close()
     torch.save(encoder, os.path.join(args.saved_models, "encoder.pth"))
@@ -137,3 +118,4 @@ def main():
 
 if __name__ == '__main__':
     main()
+
