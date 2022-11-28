@@ -1,19 +1,19 @@
 
 #train_path: 'F:\\VOCdevkit\\VOC2012\\JPEGImages'
 train_path: '/home/netadan/Desktop/data/Pascal/VOCdevkit/VOC2012/JPEGImages/'
-logs_path: "./logs/secret_50_hsv_000.01_10k/"
+logs_path: "./logs/secret_15_yuv_20k/"
 checkpoints_path: './checkpoints/'
-saved_models: './saved_models/secret_50_hsv_000.01_10k/'
+saved_models: './saved_models/secret_15_yuv_20k/'
 
 cuda: True
 
 exp_name: 2
 secret_size: 100
-num_steps: 10_000
+num_steps: 20_000
 batch_size: 4
 lr: 0.0001
 l2_loss_scale: 2
-l2_loss_ramp: 3500 #15,000
+l2_loss_ramp: 15_000 #15,000
 l2_edge_gain: 10
 l2_edge_ramp: 10000
 l2_edge_delay: 80000
