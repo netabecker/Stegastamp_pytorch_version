@@ -32,10 +32,10 @@ def main():
         test_image = os.path.join("./small_images_dir")
 
         os.system("python encode_image.py "+accuracy_args.encoder+" --images_dir="+test_image+" --secret=abcdefg "+"--save_dir="+save_dir)
-        # # for filename in glob.glob(os.path.join(save_dir,"*jpg")):
-        # #     # returned_value = os.system("decode_image.py "+dec_model+" --image="+filename)
-        # #     if returned_value != 'Failed to decode'
-        # #     print(filename)
+        # for filename in glob.glob(os.path.join(save_dir,"*jpg")):
+        #     # returned_value = os.system("decode_image.py "+dec_model+" --image="+filename)
+        #     if returned_value != 'Failed to decode'
+        #     print(filename)
         #
         os.system("python decode_image.py " + accuracy_args.decoder + " --images_dir=" + save_dir + " > " + save_dir + "/summary.txt")
 

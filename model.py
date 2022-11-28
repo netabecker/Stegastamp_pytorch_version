@@ -90,8 +90,11 @@ class StegaStampEncoder(nn.Module):
 
     def forward(self, inputs):
         secrect, image = inputs
+        # todo: Protect this code area - check if it's necessary!
         secrect = secrect - .5
+        # secrect[secrect < 0] = 0
         image = image - .5
+        # image[image < 0] = 0  # if the value is lower than 0 - set to 0!
 
         secrect = self.secret_dense(secrect)
         secrect = secrect.reshape(-1, 3, 50, 50)
