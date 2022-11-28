@@ -1,9 +1,9 @@
 
 #train_path: 'F:\\VOCdevkit\\VOC2012\\JPEGImages'
 train_path: '/home/netadan/Desktop/data/Pascal/VOCdevkit/VOC2012/JPEGImages/'
-logs_path: "./logs/secret_50_hsv_000.001_10k/"
+logs_path: "./logs/secret_50_hsv_000.01_10k/"
 checkpoints_path: './checkpoints/'
-saved_models: './saved_models/secret_50_hsv_000.001_10k/'
+saved_models: './saved_models/secret_50_hsv_000.01_10k/'
 
 cuda: True
 
@@ -13,7 +13,7 @@ num_steps: 10_000
 batch_size: 4
 lr: 0.0001
 l2_loss_scale: 2
-l2_loss_ramp: 15000
+l2_loss_ramp: 3500 #15,000
 l2_edge_gain: 10
 l2_edge_ramp: 10000
 l2_edge_delay: 80000
@@ -33,7 +33,7 @@ v_scale: 100
 # HSV scales
 hsv_h_scale: 0
 hsv_s_scale: 0
-hsv_v_scale: 1
+hsv_v_scale: 0.01
 
 no_gan: True
 rnd_trans: 0.1
