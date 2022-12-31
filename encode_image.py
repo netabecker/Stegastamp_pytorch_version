@@ -75,6 +75,14 @@ def main():
 
                 residual = encoder((secret, image))
                 encoded = image + residual
+                encoded[encoded < 0] = 0
+                values_matrix_255 = encoded[encoded > 255]
+                values_matrix_255 = np.array(values_matrix_255.cpu())
+                # print(f'number of values greater than 255 in encoded image is: {np.count_nonzero(values_matrix_255, axis=None)}')
+                values_matrix_0 = encoded[encoded < 0]
+                values_matrix_0 = np.array(values_matrix_0.cpu())
+                # print(f'number of values lower than 0 in encoded image is: {np.count_nonzero(values_matrix_0, axis=None)}')
+
                 if args.cuda:
                     residual = residual.cpu()
                     encoded = encoded.cpu()

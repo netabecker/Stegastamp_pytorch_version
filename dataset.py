@@ -5,10 +5,11 @@ from PIL import Image, ImageOps
 from torch.utils.data import Dataset, DataLoader
 from torchvision import transforms
 import torch
+SECRET_SIZE = 100
 
 
 class StegaData(Dataset):
-    def __init__(self, data_path, secret_size=100, size=(400, 400)):
+    def __init__(self, data_path, secret_size=SECRET_SIZE, size=(400, 400)):
         self.data_path = data_path
         self.secret_size = secret_size
         self.size = size

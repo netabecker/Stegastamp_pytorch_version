@@ -1,6 +1,8 @@
 import os
 import yaml
 import random
+
+import cascade_run
 import model
 import numpy as np
 from glob import glob
@@ -14,6 +16,7 @@ from torch.utils.data import DataLoader
 from torch.utils.tensorboard import SummaryWriter
 import lpips
 import aux_functions
+import cascade_run
 
 with open('cfg/setting.yaml', 'r') as f:
     args = EasyDict(yaml.load(f, Loader=yaml.SafeLoader))
@@ -26,6 +29,8 @@ if not os.path.exists(args.saved_models):
 
 
 def main():
+    cascade_run.cascade(args)
+
     log_path = os.path.join(args.logs_path, str(args.exp_name))
     writer = SummaryWriter(log_path)
 
@@ -106,10 +111,26 @@ def main():
             if global_step % 10 == 0:
                 print('{:g}: Loss = {:.4f}'.format(global_step, loss))
                 writer.add_scalars('Loss values', {'loss': loss.item(), 'secret loss': secret_loss.item(),
-                                               'D_loss loss': D_loss.item()})
+                                                   'D_loss loss': D_loss.item()})
 
-            if global_step % 100 == 0:
-                aux_functions.check_memory_stat()
+            # if global_step % 100 == 0:
+            #     aux_functions.check_memory_stat()
+
+            # Get checkpoint of best point:
+            if global_step > 1500:
+                if loss < args.min_loss:
+                    args.min_loss = loss
+                    torch.save(encoder, os.path.join(args.checkpoints_path, "encoder_best_total_loss.pth"))
+                    torch.save(decoder, os.path.join(args.checkpoints_path, "decoder_best_total_loss.pth"))
+                if secret_loss < args.min_secret_loss:
+                    args.min_secret_loss = secret_loss
+                    torch.save(encoder, os.path.join(args.checkpoints_path, "encoder_best_secret_loss.pth"))
+                    torch.save(decoder, os.path.join(args.checkpoints_path, "decoder_best_secret_loss.pth"))
+
+            # temp save of the model each 10_000 steps
+            if global_step % 10_000 == 0:
+                torch.save(encoder, os.path.join(args.saved_models, "encoder.pth"))
+                torch.save(decoder, os.path.join(args.saved_models, "decoder.pth"))
 
     writer.close()
     torch.save(encoder, os.path.join(args.saved_models, "encoder.pth"))

@@ -3,6 +3,7 @@ from inspect import currentframe
 import numpy as np
 from matplotlib import pyplot as plt
 import torch
+SECRET_SIZE = 100
 
 print(f'Imported aux_functions library')
 def getLineNumber():

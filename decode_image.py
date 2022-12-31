@@ -10,7 +10,7 @@ from torchvision import transforms
 
 BCH_POLYNOMIAL = 137
 BCH_BITS = 5
-
+SECRET_SIZE = 100
 
 def main():
     import argparse
@@ -18,7 +18,7 @@ def main():
     parser.add_argument('model', type=str)
     parser.add_argument('--image', type=str, default=None)
     parser.add_argument('--images_dir', type=str, default=None)
-    parser.add_argument('--secret_size', type=int, default=100)
+    parser.add_argument('--secret_size', type=int, default=SECRET_SIZE)
     parser.add_argument('--cuda', type=bool, default=True)
     args = parser.parse_args()
 
