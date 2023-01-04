@@ -21,7 +21,7 @@ def main():
     parser.add_argument('--images_dir', type=str, default=None)
     parser.add_argument('--save_dir', type=str, default=r'./images')
     parser.add_argument('--secret', type=str, default='Stega!!')
-    parser.add_argument('--secret_size', type=int, default=100)
+    # parser.add_argument('--secret_size', type=int, default=100)
     parser.add_argument('--cuda', type=bool, default=True)
     args = parser.parse_args()
 

@@ -12,6 +12,7 @@ import torch.nn.functional as F
 import warnings
 warnings.filterwarnings('ignore')
 from torchvision import transforms
+SECRET_SIZE=100
 
 
 class Dense(nn.Module):
@@ -21,6 +22,7 @@ class Dense(nn.Module):
         self.out_features = out_features
         self.activation = activation
         self.kernel_initializer = kernel_initializer
+        # self.batch_norm = nn.BatchNorm1d
 
         self.linear = nn.Linear(in_features, out_features)
         # initialization
@@ -34,6 +36,7 @@ class Dense(nn.Module):
         if self.activation is not None:
             if self.activation == 'relu':
                 outputs = nn.ReLU(inplace=True)(outputs)
+
         return outputs
 
 
@@ -71,7 +74,7 @@ class Flatten(nn.Module):
 class StegaStampEncoder(nn.Module):
     def __init__(self):
         super(StegaStampEncoder, self).__init__()
-        self.secret_dense = Dense(100, 7500, activation='relu', kernel_initializer='he_normal')
+        self.secret_dense = Dense(SECRET_SIZE, 7500, activation='relu', kernel_initializer='he_normal')
 
         self.conv1 = Conv2D(6, 32, 3, activation='relu')
         self.conv2 = Conv2D(32, 32, 3, activation='relu', strides=2)
@@ -98,9 +101,20 @@ class StegaStampEncoder(nn.Module):
 
         secrect = self.secret_dense(secrect)
         secrect = secrect.reshape(-1, 3, 50, 50)
-        secrect_enlarged = nn.Upsample(scale_factor=(8, 8))(secrect)
+        # secrect_enlarged = nn.Upsample(scale_factor=(8, 8))(secrect)
+        # downsample image instead of upsample secret:
+        image = nn.functional.interpolate(image, scale_factor=(1/8, 1/8))
 
-        inputs = torch.cat([secrect_enlarged, image], dim=1)
+        inputs = torch.cat([secrect, image], dim=1)
+
+        # todo 04_01: Unet --> we'd like to transform from 4,6,50,50 -> 4,3,400,400
+        #  We can either add upsample to Unet or add another interpolation. we can add it in the end on the residual.
+        #  note: https://github.com/milesial/Pytorch-UNet/tree/master/unet
+        #  Unet is used for classification - we'd like to remove that part
+        #  Define another class - double convolution - for example: down, dc, down, up
+        #  another option - enlarge the secret to be bigger than 7500 - could be expensive (fc)
+        #  NOTE THE SKIP CONNECTIONS IN UNET
+
         conv1 = self.conv1(inputs)
         conv2 = self.conv2(conv1)
         conv3 = self.conv3(conv2)
@@ -145,11 +159,12 @@ class SpatialTransformerNetwork(nn.Module):
 
 
 class StegaStampDecoder(nn.Module):
-    def __init__(self, secret_size=100):
+    def __init__(self, secret_size=SECRET_SIZE):
         super(StegaStampDecoder, self).__init__()
         self.secret_size = secret_size
         self.stn = SpatialTransformerNetwork()
         self.decoder = nn.Sequential(
+            # todo: Change this with the regular Unet - it's output is classification and it could work
             Conv2D(3, 32, 3, strides=2, activation='relu'),
             Conv2D(32, 32, 3, activation='relu'),
             Conv2D(32, 64, 3, strides=2, activation='relu'),
@@ -314,7 +329,7 @@ def build_model(encoder, decoder, discriminator, lpips_fn, secret_input, image_i
         cross_entropy = cross_entropy.cuda()
     secret_loss = cross_entropy(decoded_secret, secret_input)
     decipher_indicator = 0
-    if torch.equal(decoded_secret, secret_input):
+    if torch.sum(torch.sum(torch.round(decoded_secret[:,:96]) == secret_input[:,:96], axis=1)/96 >= 0.8):
         decipher_indicator = 1
 
     size = (int(image_input.shape[2]), int(image_input.shape[3]))

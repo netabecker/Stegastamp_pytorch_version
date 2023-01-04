@@ -40,7 +40,7 @@ class StegaData(Dataset):
 #     # print(type(img_cover), type(secret))
 #     # print(img_cover.shape, secret.shape)
 #
-#     dataset = StegaData(data_path=r'E:\dataset\mirflickr', secret_size=100, size=(400, 400))
+#     dataset = StegaData(data_path=r'E:\dataset\mirflickr', secret_size=SECRET_SIZE, size=(400, 400))
 #     dataloader = DataLoader(dataset, batch_size=4, shuffle=True, pin_memory=True)
 #     image_input, secret_input = next(iter(dataloader))
 #     print(type(image_input), type(secret_input))
