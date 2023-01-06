@@ -37,8 +37,8 @@ def main():
     dataset = StegaData(args.train_path, args.secret_size, size=(400, 400))
     dataloader = DataLoader(dataset, batch_size=args.batch_size, shuffle=True, pin_memory=True)
 
-    encoder = model.StegaStampEncoder()
-    decoder = model.StegaStampDecoder(secret_size=args.secret_size)
+    encoder = model.StegaStampEncoder_Unet()
+    decoder = model.StegaStampDecoder_Unet(secret_size=args.secret_size)
     discriminator = model.Discriminator()
     lpips_alex = lpips.LPIPS(net="alex", verbose=False)
     if args.cuda:
@@ -113,9 +113,7 @@ def main():
                 print('{:g}: Loss = {:.4f} __ secret loss = {:.4f}'.format(global_step, loss, secret_loss.item()))
                 writer.add_scalars('Loss values', {'loss': loss.item(), 'secret loss': secret_loss.item(),
                                                    'D_loss loss': D_loss.item()})
-
-            # if global_step % 100 == 0:
-            #     aux_functions.check_memory_stat()
+                # aux_functions.check_memory_stat()
 
             # Get checkpoint of best point:
             if global_step > 1500:

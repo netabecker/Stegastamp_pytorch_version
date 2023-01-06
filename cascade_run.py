@@ -14,6 +14,8 @@ def cascade(yaml_args):
     # parser.add_argument('--logs_path', type=int, default=None)
     # parser.add_argument('--checkpoints_path', type=int, default=None)
     # parser.add_argument('--saved_models', type=int, default=None)
+    parser.add_argument('--in_network_index', type=int)
+    parser.add_argument('--out_network_index', type=int)
     parser.add_argument('--secret_loss', type=float)
     parser = parser.parse_args()
 
@@ -26,15 +28,18 @@ def cascade(yaml_args):
     if parser.secret_loss is not None:
         yaml_args.secret_loss_scale = parser.secret_loss
 
-    # yaml_args.logs_path = os.path.join("./logs/" + "hsv_1-1-5_modified_sl_" + str(parser.secret_loss))
-    # if not os.path.exists(yaml_args.logs_path):
-    #     os.makedirs(yaml_args.logs_path)
-    #
-    # yaml_args.checkpoints_path = os.path.join("./checkpoints/" + "hsv_1-1-5_modified_sl_" + str(parser.secret_loss))
-    # if not os.path.exists(yaml_args.checkpoints_path):
-    #     os.makedirs(yaml_args.checkpoints_path)
-    #
-    # yaml_args.saved_models = os.path.join("./saved_models/" + "hsv_1-1-5_modified_sl_" + str(parser.secret_loss))
-    # if not os.path.exists(yaml_args.saved_models):
-    #     os.makedirs(yaml_args.saved_models)
+    yaml_args.logs_path = os.path.join("./logs/" + "in_nn_" + str(parser.in_network_index) +
+                                       "_out_nn_" + str(parser.out_network_index))
+    if not os.path.exists(yaml_args.logs_path):
+        os.makedirs(yaml_args.logs_path)
+
+    yaml_args.checkpoints_path = os.path.join("./checkpoints/" + "in_nn_" + str(parser.in_network_index) +
+                                              "_out_nn_" + str(parser.out_network_index))
+    if not os.path.exists(yaml_args.checkpoints_path):
+        os.makedirs(yaml_args.checkpoints_path)
+
+    yaml_args.saved_models = os.path.join("./saved_models/" + "in_nn_" + str(parser.in_network_index) +
+                                          "_out_nn_" + str(parser.out_network_index))
+    if not os.path.exists(yaml_args.saved_models):
+        os.makedirs(yaml_args.saved_models)
 
