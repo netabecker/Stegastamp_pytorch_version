@@ -1,9 +1,9 @@
 
 #train_path: 'F:\\VOCdevkit\\VOC2012\\JPEGImages'
 train_path: '/home/netadan/Desktop/data/VOC2012/JPEGImages/'
-logs_path: "./logs/debug_new_net_secret_2.3/"
-checkpoints_path: './checkpoints/debug_new_net_secret_2.3/'
-saved_models: './saved_models/debug_new_net_secret_2.3/'
+logs_path: "./logs/debug_new_net_trial2/"
+checkpoints_path: './checkpoints/debug_new_net_trial2/'
+saved_models: './saved_models/debug_new_net_trial2/'
 
 cuda: True
 
@@ -19,7 +19,7 @@ l2_edge_ramp: 10000
 l2_edge_delay: 80000
 lpips_loss_scale: 0.1
 lpips_loss_ramp: 15000
-secret_loss_scale: 2.3
+secret_loss_scale: 1
 secret_loss_ramp: 1
 G_loss_scale: 0.5
 G_loss_ramp: 15_000
