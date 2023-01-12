@@ -376,12 +376,14 @@ def transform_net(encoded_image, args, global_step):
         sat_weight = sat_weight.cuda()
     encoded_image_lum = torch.mean(encoded_image * sat_weight, dim=1).unsqueeze_(1)
     encoded_image = (1 - rnd_sat) * encoded_image + rnd_sat * encoded_image_lum
+    encoded_image = torch.clamp(encoded_image, 0, 1) #todo: maybe remove
 
     # jpeg
     encoded_image = encoded_image.reshape([-1, 3, 400, 400])
     if not args.no_jpeg:
         encoded_image = utils.jpeg_compress_decompress(encoded_image, rounding=utils.round_only_at_0,
                                                        quality=jpeg_quality)
+        encoded_image = torch.clamp(encoded_image, 0, 1) #todo: maybe remove
 
     return encoded_image
 
@@ -480,42 +482,42 @@ def build_model(encoder, decoder, discriminator, lpips_fn, secret_input, image_i
     falloff_im *= l2_edge_gain
 
     # YUV loss
-    # encoded_image_yuv = color.rgb_to_yuv(encoded_image)
-    # image_input_yuv = color.rgb_to_yuv(image_input)
-    # im_diff = encoded_image_yuv - image_input_yuv
-    # im_diff += im_diff * falloff_im.unsqueeze_(0)
-    # yuv_loss = torch.mean((im_diff) ** 2, axis=[0, 2, 3])
-    # yuv_scales = torch.Tensor(yuv_scales)
-    # if args.cuda:
-    #     yuv_scales = yuv_scales.cuda()
-    # image_loss = torch.dot(yuv_loss, yuv_scales)
+    encoded_image_yuv = color.rgb_to_yuv(encoded_image)
+    image_input_yuv = color.rgb_to_yuv(image_input)
+    im_diff = encoded_image_yuv - image_input_yuv
+    im_diff += im_diff * falloff_im.unsqueeze_(0)
+    yuv_loss = torch.mean((im_diff) ** 2, axis=[0, 2, 3])
+    yuv_scales = torch.Tensor(yuv_scales)
+    if args.cuda:
+        yuv_scales = yuv_scales.cuda()
+    image_loss = torch.dot(yuv_loss, yuv_scales)
 
     # HSV loss
-
-    min_value_0 = torch.min(encoded_image[0, :, :, :]) * torch.ones_like(encoded_image[0, :, :, :])
-    min_value_1 = torch.min(encoded_image[1, :, :, :]) * torch.ones_like(encoded_image[0, :, :, :])
-    min_value_2 = torch.min(encoded_image[2, :, :, :]) * torch.ones_like(encoded_image[0, :, :, :])
-    min_value_3 = torch.min(encoded_image[3, :, :, :]) * torch.ones_like(encoded_image[0, :, :, :])
-
-    min_value = torch.stack((min_value_0, min_value_1, min_value_2, min_value_3), 0)
-
-    encoded_image_hsv = color.rgb_to_hsv(encoded_image + abs(min_value))
-    # encoded_image_hsv = color.rgb_to_hsv(torch.clamp(encoded_image,0,1))
-    avg_encoded = torch.mean(encoded_image_hsv)
-    max_encoded = torch.max(encoded_image_hsv)
-    image_input_hsv = color.rgb_to_hsv(image_input)
-    avg_image = torch.mean(image_input_hsv)
-    max_image = torch.max(image_input_hsv)
-    # normalizing the values --> Elad suggested that we'll remove it
-    # encoded_image_hsv[:, 0, :, :] = encoded_image_hsv[:, 0, :, :] / (2 * np.pi)
-    # image_input_hsv[:, 0, :, :] = image_input_hsv[:, 0, :, :] / (2 * np.pi)
-    im_diff = encoded_image_hsv - image_input_hsv
-    im_diff += im_diff * falloff_im.unsqueeze_(0)
-    hsv_loss = torch.mean((im_diff) ** 2, axis=[0, 2, 3])
-    hsv_scales = torch.Tensor(hsv_scales)
-    if args.cuda:
-        hsv_scales = hsv_scales.cuda()
-    image_loss = torch.dot(hsv_loss, hsv_scales)
+    #
+    # min_value_0 = torch.min(encoded_image[0, :, :, :]) * torch.ones_like(encoded_image[0, :, :, :])
+    # min_value_1 = torch.min(encoded_image[1, :, :, :]) * torch.ones_like(encoded_image[0, :, :, :])
+    # min_value_2 = torch.min(encoded_image[2, :, :, :]) * torch.ones_like(encoded_image[0, :, :, :])
+    # min_value_3 = torch.min(encoded_image[3, :, :, :]) * torch.ones_like(encoded_image[0, :, :, :])
+    #
+    # min_value = torch.stack((min_value_0, min_value_1, min_value_2, min_value_3), 0)
+    #
+    # encoded_image_hsv = color.rgb_to_hsv(encoded_image + abs(min_value))
+    # # encoded_image_hsv = color.rgb_to_hsv(torch.clamp(encoded_image,0,1))
+    # avg_encoded = torch.mean(encoded_image_hsv)
+    # max_encoded = torch.max(encoded_image_hsv)
+    # image_input_hsv = color.rgb_to_hsv(image_input)
+    # avg_image = torch.mean(image_input_hsv)
+    # max_image = torch.max(image_input_hsv)
+    # # normalizing the values --> Elad suggested that we'll remove it
+    # # encoded_image_hsv[:, 0, :, :] = encoded_image_hsv[:, 0, :, :] / (2 * np.pi)
+    # # image_input_hsv[:, 0, :, :] = image_input_hsv[:, 0, :, :] / (2 * np.pi)
+    # im_diff = encoded_image_hsv - image_input_hsv
+    # im_diff += im_diff * falloff_im.unsqueeze_(0)
+    # hsv_loss = torch.mean((im_diff) ** 2, axis=[0, 2, 3])
+    # hsv_scales = torch.Tensor(hsv_scales)
+    # if args.cuda:
+    #     hsv_scales = hsv_scales.cuda()
+    # image_loss = torch.dot(hsv_loss, hsv_scales)
 
     D_loss = D_output_real - D_output_fake
     G_loss = D_output_fake
@@ -533,12 +535,14 @@ def build_model(encoder, decoder, discriminator, lpips_fn, secret_input, image_i
     writer.add_scalar('metric/bit_acc', bit_acc, global_step)
     writer.add_scalar('metric/str_acc', str_acc, global_step)
 
-    writer.add_scalar('loss/avg_enc', avg_encoded, global_step)
-    writer.add_scalar('loss/avg_img', avg_image, global_step)
-    writer.add_scalar('loss/max_enc', max_encoded, global_step)
-    writer.add_scalar('loss/max_img', max_image, global_step)
+    # writer.add_scalar('loss/avg_enc', avg_encoded, global_step)
+    # writer.add_scalar('loss/avg_img', avg_image, global_step)
+    # writer.add_scalar('loss/max_enc', max_encoded, global_step)
+    # writer.add_scalar('loss/max_img', max_image, global_step)
     # print(f'decipher indicator = {decipher_indicator}')
     writer.add_scalar('loss/decipher_indicator', decipher_indicator, global_step)
+    writer.add_scalar('loss/secret_and_image_loss', 0.5*secret_loss + 0.5*image_loss, global_step)
+    # writer.add_scalar('loss/decipher_and_image_loss', decipher_indicator, global_step)
 
     if global_step % 20 == 0:
         writer.add_image('input/image_input', image_input[0], global_step)
