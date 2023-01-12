@@ -5,6 +5,9 @@ logs_path: "./logs/secret_yuv_100k/"
 checkpoints_path: './checkpoints/secret_yuv_100k/'
 saved_models: './saved_models/secret_yuv_100k/'
 
+# running with value: THEANO_FLAGS="optimizer_excluding=conv_dnn"
+# THEANO_FLAGS="dnn.conv.algo_bwd_filter=deterministic,dnn.conv.algo_bwd_data=deterministic"
+
 cuda: True
 
 exp_name: 2
@@ -17,9 +20,9 @@ l2_loss_ramp: 15_000
 l2_edge_gain: 10
 l2_edge_ramp: 10000
 l2_edge_delay: 80000
-lpips_loss_scale: 0.1
+lpips_loss_scale: 0.01
 lpips_loss_ramp: 15000
-secret_loss_scale: 2.2
+secret_loss_scale: 2.5
 secret_loss_ramp: 1
 G_loss_scale: 0.5
 G_loss_ramp: 15_000
@@ -56,3 +59,4 @@ no_im_loss_steps: 1500
 pretrained: None
 min_loss: 1_000 # set high value so it won't be saved.
 min_secret_loss: 1_000 # set high value so it won't be saved.
+seed: 0

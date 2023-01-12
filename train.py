@@ -31,6 +31,26 @@ if not os.path.exists(args.saved_models):
 def main():
     cascade_run.cascade(args)
 
+    # code by Elad:
+    # # fix random seeds
+    torch.manual_seed(args.seed)
+    torch.backends.cudnn.deterministic = True
+    torch.backends.cudnn.benchmark = False
+    np.random.seed(args.seed)
+
+    # code I found online - gpu has non deterministic behavior:
+    # seed = args.seed
+    # np.random.seed(seed)
+    # random.seed(seed)
+    # torch.manual_seed(seed)
+    # torch.cuda.manual_seed(seed)
+    # # When running on the CuDNN backend, two further options must be set
+    # torch.backends.cudnn.deterministic = True
+    # torch.backends.cudnn.benchmark = False
+    # # Set a fixed value for the hash seed
+    # os.environ["PYTHONHASHSEED"] = str(seed)
+    # print(f"Random seed set as {seed}")
+
     log_path = os.path.join(args.logs_path, str(args.exp_name))
     writer = SummaryWriter(log_path)
 
@@ -108,8 +128,8 @@ def main():
                     optimize_dis.zero_grad()
                     optimize_dis.step()
 
-            if global_step % 10 == 0:
-                print('{:g}: Loss = {:.4f}'.format(global_step, loss))
+            if global_step % 1 == 0:
+                print('{:g}: Loss = {:.4f} -- secret loss = {:.2f} --- seed={:.1f}'.format(global_step, loss, secret_loss, args.seed))
                 writer.add_scalars('Loss values', {'loss': loss.item(), 'secret loss': secret_loss.item(),
                                                    'D_loss loss': D_loss.item()})
 
@@ -117,6 +137,9 @@ def main():
             #     aux_functions.check_memory_stat()
 
             # Get checkpoint of best point:
+            if global_step == 80_000:
+                torch.save(encoder, os.path.join(args.checkpoints_path, "encoder_80_000.pth"))
+                torch.save(decoder, os.path.join(args.checkpoints_path, "decoder_80_000.pth"))
             if global_step > 1500:
                 if loss < args.min_loss:
                     args.min_loss = loss

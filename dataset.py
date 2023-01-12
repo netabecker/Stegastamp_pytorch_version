@@ -5,8 +5,17 @@ from PIL import Image, ImageOps
 from torch.utils.data import Dataset, DataLoader
 from torchvision import transforms
 import torch
+import aux_functions
 SECRET_SIZE = 100
+SEED = 1
 
+
+# fix seed
+torch.manual_seed(SEED)
+torch.backends.cudnn.deterministic = True
+torch.backends.cudnn.benchmark = False
+np.random.seed(SEED)
+aux_functions.infoMessage0(f'dataset seed is set to: {SEED}')
 
 class StegaData(Dataset):
     def __init__(self, data_path, secret_size=SECRET_SIZE, size=(400, 400)):
