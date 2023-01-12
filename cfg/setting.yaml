@@ -1,9 +1,9 @@
 
 #train_path: 'F:\\VOCdevkit\\VOC2012\\JPEGImages'
 train_path: '/home/netadan/Desktop/data/VOC2012/JPEGImages/'
-logs_path: "./logs/secret_yuv_100k/"
-checkpoints_path: './checkpoints/secret_yuv_100k/'
-saved_models: './saved_models/secret_yuv_100k/'
+logs_path: "./logs/debug_new_net_trial2/"
+checkpoints_path: './checkpoints/debug_new_net_trial2/'
+saved_models: './saved_models/debug_new_net_trial2/'
 
 # running with value: THEANO_FLAGS="optimizer_excluding=conv_dnn"
 # THEANO_FLAGS="dnn.conv.algo_bwd_filter=deterministic,dnn.conv.algo_bwd_data=deterministic"

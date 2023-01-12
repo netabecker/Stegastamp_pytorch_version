@@ -1,5 +1,7 @@
 import sys
 
+import matplotlib.pyplot as plt
+
 sys.path.append("PerceptualSimilarity\\")
 import os
 import utils
@@ -12,6 +14,8 @@ import torch.nn.functional as F
 import warnings
 warnings.filterwarnings('ignore')
 from torchvision import transforms
+from unet import unet_parts as unet
+SECRET_SIZE=100
 
 
 class Dense(nn.Module):
@@ -21,6 +25,7 @@ class Dense(nn.Module):
         self.out_features = out_features
         self.activation = activation
         self.kernel_initializer = kernel_initializer
+        # self.batch_norm = nn.BatchNorm1d
 
         self.linear = nn.Linear(in_features, out_features)
         # initialization
@@ -34,6 +39,7 @@ class Dense(nn.Module):
         if self.activation is not None:
             if self.activation == 'relu':
                 outputs = nn.ReLU(inplace=True)(outputs)
+
         return outputs
 
 
@@ -71,7 +77,7 @@ class Flatten(nn.Module):
 class StegaStampEncoder(nn.Module):
     def __init__(self):
         super(StegaStampEncoder, self).__init__()
-        self.secret_dense = Dense(100, 7500, activation='relu', kernel_initializer='he_normal')
+        self.secret_dense = Dense(SECRET_SIZE, 7500, activation='relu', kernel_initializer='he_normal')
 
         self.conv1 = Conv2D(6, 32, 3, activation='relu')
         self.conv2 = Conv2D(32, 32, 3, activation='relu', strides=2)
@@ -90,7 +96,6 @@ class StegaStampEncoder(nn.Module):
 
     def forward(self, inputs):
         secrect, image = inputs
-        # todo: Protect this code area - check if it's necessary!
         secrect = secrect - .5
         # secrect[secrect < 0] = 0
         image = image - .5
@@ -99,8 +104,19 @@ class StegaStampEncoder(nn.Module):
         secrect = self.secret_dense(secrect)
         secrect = secrect.reshape(-1, 3, 50, 50)
         secrect_enlarged = nn.Upsample(scale_factor=(8, 8))(secrect)
+        # downsample image instead of upsample secret:
+        # image = nn.functional.interpolate(image, scale_factor=(1/8, 1/8))
 
         inputs = torch.cat([secrect_enlarged, image], dim=1)
+
+        # todo 04_01: Unet --> we'd like to transform from 4,6,50,50 -> 4,3,400,400
+        #  We can either add upsample to Unet or add another interpolation. we can add it in the end on the residual.
+        #  note: https://github.com/milesial/Pytorch-UNet/tree/master/unet
+        #  Unet is used for classification - we'd like to remove that part
+        #  Define another class - double convolution - for example: down, dc, down, up
+        #  another option - enlarge the secret to be bigger than 7500 - could be expensive (fc)
+        #  NOTE THE SKIP CONNECTIONS IN UNET
+
         conv1 = self.conv1(inputs)
         conv2 = self.conv2(conv1)
         conv3 = self.conv3(conv2)
@@ -119,6 +135,61 @@ class StegaStampEncoder(nn.Module):
         merge9 = torch.cat([conv1, up9, inputs], dim=1)
         conv9 = self.conv9(merge9)
         residual = self.residual(conv9)
+        return residual
+
+
+class StegaStampEncoder_Unet(nn.Module):
+    def __init__(self):
+        super(StegaStampEncoder_Unet, self).__init__()
+        self.secret_dense = Dense(SECRET_SIZE, 7500, activation='relu', kernel_initializer='he_normal') # todo: consider using more than 7_500
+        self.bilinear = False
+
+        self.inc = (unet.DoubleConv(6, 16))
+        self.down1 = (unet.Down(16, 32))
+        self.down2 = (unet.Down(32, 64))
+        self.down3 = (unet.Down(64, 128))
+        factor = 2 if self.bilinear else 1
+        self.down4 = (unet.Down(128, 256 // factor))
+        self.up1 = (unet.Up(256, 128 // factor, self.bilinear))
+        self.up2 = (unet.Up(128, 64 // factor, self.bilinear))
+        self.up3 = (unet.Up(64, 32 // factor, self.bilinear))
+        self.up4 = (unet.Up(32, 3, self.bilinear))
+        self.down5 = (unet.Down(3, 3 // factor))
+        self.residual = (unet.Up(128, 64, self.bilinear))
+        # self.residual = (unet.OutConv(64, self.bilinear))
+
+    def forward(self, inputs):
+        secrect, image = inputs
+        secrect = secrect - .5
+        image = image - .5
+
+        secrect = self.secret_dense(secrect)
+        secrect = secrect.reshape(-1, 3, 50, 50)
+        secrect_enlarged = nn.Upsample(scale_factor=(8, 8))(secrect)
+
+        # downsample image instead of upsample secret:
+        # image = nn.functional.interpolate(image, scale_factor=(1/8, 1/8))
+
+        inputs = torch.cat([secrect_enlarged, image], dim=1)
+
+        # todo 04_01: Unet --> we'd like to transform from 4,6,50,50 -> 4,3,400,400
+        #  We can either add upsample to Unet or add another interpolation. we can add it in the end on the residual.
+        #  note: https://github.com/milesial/Pytorch-UNet/tree/master/unet
+        #  Unet is used for classification - we'd like to remove that part
+        #  Define another class - double convolution - for example: down, dc, down, up
+
+        x1 = self.inc(inputs)
+        x2 = self.down1(x1)
+        x3 = self.down2(x2)
+        # x4 = self.down3(x3)
+        # x5 = self.down4(x4)
+        # x = self.up1(x5, x4)
+        # x = self.up2(x, x3)
+        x = x3
+        x = self.up3(x, x2)
+        x = self.up4(x, x1)
+        residual = x
+        # residual = nn.Upsample(scale_factor=(8, 8))(x)
         return residual
 
 
@@ -145,11 +216,12 @@ class SpatialTransformerNetwork(nn.Module):
 
 
 class StegaStampDecoder(nn.Module):
-    def __init__(self, secret_size=100):
+    def __init__(self, secret_size=SECRET_SIZE):
         super(StegaStampDecoder, self).__init__()
         self.secret_size = secret_size
         self.stn = SpatialTransformerNetwork()
         self.decoder = nn.Sequential(
+            # todo: Change this with the regular Unet - it's output is classification and it could work
             Conv2D(3, 32, 3, strides=2, activation='relu'),
             Conv2D(32, 32, 3, activation='relu'),
             Conv2D(32, 64, 3, strides=2, activation='relu'),
@@ -165,6 +237,79 @@ class StegaStampDecoder(nn.Module):
         image = image - .5
         transformed_image = self.stn(image)
         return torch.sigmoid(self.decoder(transformed_image))
+
+
+class StegaStampDecoder_Unet(nn.Module):
+    def __init__(self, secret_size=SECRET_SIZE):
+        super(StegaStampDecoder_Unet, self).__init__()
+        self.secret_size = secret_size
+        self.bilinear = False
+        self.stn = SpatialTransformerNetwork()
+        self.decoder = nn.Sequential(
+            Conv2D(3, 32, 3, strides=2, activation='relu'),
+            Conv2D(32, 32, 3, activation='relu'),
+            Conv2D(32, 64, 3, strides=2, activation='relu'),
+            Conv2D(64, 64, 3, activation='relu'),
+            Conv2D(64, 64, 3, strides=2, activation='relu'),
+            Conv2D(64, 128, 3, strides=2, activation='relu'),
+            Conv2D(128, 128, 3, strides=2, activation='relu'),
+            Flatten(),
+            Dense(21632, 512, activation='relu'),
+            Dense(512, secret_size, activation=None))
+
+        self.flat = nn.Sequential(
+            Flatten(),
+            Dense(480000, 512, activation='relu'),
+            Dense(512, secret_size, activation=None))
+
+        self.inc = (unet.DoubleConv(3, 16))
+        self.down1 = (unet.Down(16, 32))
+        self.down2 = (unet.Down(32, 64))
+        self.down3 = (unet.Down(64, 128))
+        factor = 2 if self.bilinear else 1
+        self.down4 = (unet.Down(128, 256 // factor))
+        self.up1 = (unet.Up(256, 128 // factor, self.bilinear))
+        self.up2 = (unet.Up(128, 64 // factor, self.bilinear))
+        self.up3 = (unet.Up(64, 32 // factor, self.bilinear))
+        self.up4 = (unet.Up(32, 3, self.bilinear))
+        self.outc = (unet.OutConv(3, 3))
+        # self.outc_dec = (unet.OutConv_decoder(100, 3))
+
+        # DIVIDED BY 2
+        # self.inc = (unet.DoubleConv(3, 32))
+        # self.down1 = (unet.Down(32, 64))
+        # self.down2 = (unet.Down(64, 128))
+        # self.down3 = (unet.Down(128, 256))
+        # factor = 2 if self.bilinear else 1
+        # self.down4 = (unet.Down(256, 512 // factor))
+        # self.up1 = (unet.Up(512, 256 // factor, self.bilinear))
+        # self.up2 = (unet.Up(256, 128 // factor, self.bilinear))
+        # self.up3 = (unet.Up(128, 64 // factor, self.bilinear))
+        # self.up4 = (unet.Up(64, 3, self.bilinear))
+        # self.outc = (unet.OutConv(3, secret_size))
+        # self.dense_out = Dense(4800, SECRET_SIZE, activation='relu', kernel_initializer='he_normal')
+
+
+    def decoder_net(self, input):
+        x1 = self.inc(input)
+        x2 = self.down1(x1)
+        x3 = self.down2(x2)
+        x4 = self.down3(x3)
+        # x5 = self.down4(x4)
+        # x = self.up1(x5, x4)
+        x = x4
+        x = self.up2(x, x3)
+        x = self.up3(x, x2)
+        x = self.up4(x, x1)
+        logits = self.outc(x)
+        logits = self.flat(logits)
+        return logits
+
+    def forward(self, image):
+        image = image - .5
+        transformed_image = self.stn(image)
+        return_value = torch.sigmoid(self.decoder_net(transformed_image))
+        return return_value
 
 
 class Discriminator(nn.Module):
@@ -304,7 +449,8 @@ def build_model(encoder, decoder, discriminator, lpips_fn, secret_input, image_i
         D_output_fake, D_heatmap = discriminator(encoded_warped)
 
     transformed_image = transform_net(encoded_image, args, global_step)
-    decoded_secret = decoder(transformed_image)
+    # plt.savefig(transformed_image, "temp_image_transformed")
+    decoded_secret = decoder(transformed_image)  # after net change: 4,100,400,400. before: 4,100
     bit_acc, str_acc = get_secret_acc(secret_input, decoded_secret)
 
     normalized_input = image_input * 2 - 1
@@ -316,7 +462,7 @@ def build_model(encoder, decoder, discriminator, lpips_fn, secret_input, image_i
         cross_entropy = cross_entropy.cuda()
     secret_loss = cross_entropy(decoded_secret, secret_input)
     decipher_indicator = 0
-    if torch.equal(decoded_secret, secret_input):
+    if torch.sum(torch.sum(torch.round(decoded_secret[:,:96]) == secret_input[:,:96], axis=1)/96 >= 0.8):
         decipher_indicator = 1
 
     size = (int(image_input.shape[2]), int(image_input.shape[3]))

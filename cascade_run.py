@@ -3,9 +3,7 @@ import train
 from easydict import EasyDict
 import yaml
 import os
-#logs_path: "./logs/secret_yuv_100k/"
-# checkpoints_path: './checkpoints/secret_yuv_100k/'
-# saved_models: './saved_models/secret_yuv_100k/'
+
 
 def cascade(yaml_args):
     import argparse
@@ -33,6 +31,7 @@ def cascade(yaml_args):
     global SEED
     SEED = parser.seed
     # yaml_args.lpips_loss_scale = parser.lpips
+
 
     yaml_args.logs_path = os.path.join("./logs/" + "yuv_secret_loss_2.5_lpips_0.01_seed_" + str(parser.seed) + "_run_" + str(parser.run))
     if not os.path.exists(yaml_args.logs_path):
