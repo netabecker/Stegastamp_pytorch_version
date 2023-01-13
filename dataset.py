@@ -7,10 +7,10 @@ from torchvision import transforms
 import torch
 import aux_functions
 SECRET_SIZE = 100
-SEED = 1
 
 
 # fix seed
+SEED = 1
 torch.manual_seed(SEED)
 torch.backends.cudnn.deterministic = True
 torch.backends.cudnn.benchmark = False

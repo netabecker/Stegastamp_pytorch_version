@@ -38,27 +38,14 @@ def main():
     torch.backends.cudnn.benchmark = False
     np.random.seed(args.seed)
 
-    # code I found online - gpu has non deterministic behavior:
-    # seed = args.seed
-    # np.random.seed(seed)
-    # random.seed(seed)
-    # torch.manual_seed(seed)
-    # torch.cuda.manual_seed(seed)
-    # # When running on the CuDNN backend, two further options must be set
-    # torch.backends.cudnn.deterministic = True
-    # torch.backends.cudnn.benchmark = False
-    # # Set a fixed value for the hash seed
-    # os.environ["PYTHONHASHSEED"] = str(seed)
-    # print(f"Random seed set as {seed}")
-
     log_path = os.path.join(args.logs_path, str(args.exp_name))
     writer = SummaryWriter(log_path)
 
     dataset = StegaData(args.train_path, args.secret_size, size=(400, 400))
     dataloader = DataLoader(dataset, batch_size=args.batch_size, shuffle=True, pin_memory=True)
 
-    encoder = model.StegaStampEncoder_Unet()
-    decoder = model.StegaStampDecoder_Unet(secret_size=args.secret_size)
+    encoder = model.StegaStampEncoder()
+    decoder = model.StegaStampDecoder(secret_size=args.secret_size)
     discriminator = model.Discriminator()
     lpips_alex = lpips.LPIPS(net="alex", verbose=False)
     if args.cuda:
