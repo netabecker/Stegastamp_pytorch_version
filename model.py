@@ -1,5 +1,6 @@
 import sys
 
+import matplotlib.pyplot as plt
 sys.path.append("PerceptualSimilarity\\")
 import os
 import utils
@@ -12,6 +13,7 @@ import torch.nn.functional as F
 import warnings
 warnings.filterwarnings('ignore')
 from torchvision import transforms
+SECRET_SIZE=100
 
 
 class Dense(nn.Module):
@@ -21,6 +23,7 @@ class Dense(nn.Module):
         self.out_features = out_features
         self.activation = activation
         self.kernel_initializer = kernel_initializer
+        # self.batch_norm = nn.BatchNorm1d
 
         self.linear = nn.Linear(in_features, out_features)
         # initialization
@@ -71,7 +74,7 @@ class Flatten(nn.Module):
 class StegaStampEncoder(nn.Module):
     def __init__(self):
         super(StegaStampEncoder, self).__init__()
-        self.secret_dense = Dense(100, 7500, activation='relu', kernel_initializer='he_normal')
+        self.secret_dense = Dense(SECRET_SIZE, 7500, activation='relu', kernel_initializer='he_normal')
 
         self.conv1 = Conv2D(6, 32, 3, activation='relu')
         self.conv2 = Conv2D(32, 32, 3, activation='relu', strides=2)
@@ -90,7 +93,6 @@ class StegaStampEncoder(nn.Module):
 
     def forward(self, inputs):
         secrect, image = inputs
-        # todo: Protect this code area - check if it's necessary!
         secrect = secrect - .5
         # secrect[secrect < 0] = 0
         image = image - .5
@@ -99,8 +101,19 @@ class StegaStampEncoder(nn.Module):
         secrect = self.secret_dense(secrect)
         secrect = secrect.reshape(-1, 3, 50, 50)
         secrect_enlarged = nn.Upsample(scale_factor=(8, 8))(secrect)
+        # downsample image instead of upsample secret:
+        # image = nn.functional.interpolate(image, scale_factor=(1/8, 1/8))
 
         inputs = torch.cat([secrect_enlarged, image], dim=1)
+
+        # todo 04_01: Unet --> we'd like to transform from 4,6,50,50 -> 4,3,400,400
+        #  We can either add upsample to Unet or add another interpolation. we can add it in the end on the residual.
+        #  note: https://github.com/milesial/Pytorch-UNet/tree/master/unet
+        #  Unet is used for classification - we'd like to remove that part
+        #  Define another class - double convolution - for example: down, dc, down, up
+        #  another option - enlarge the secret to be bigger than 7500 - could be expensive (fc)
+        #  NOTE THE SKIP CONNECTIONS IN UNET
+
         conv1 = self.conv1(inputs)
         conv2 = self.conv2(conv1)
         conv3 = self.conv3(conv2)
@@ -145,7 +158,7 @@ class SpatialTransformerNetwork(nn.Module):
 
 
 class StegaStampDecoder(nn.Module):
-    def __init__(self, secret_size=100):
+    def __init__(self, secret_size=SECRET_SIZE):
         super(StegaStampDecoder, self).__init__()
         self.secret_size = secret_size
         self.stn = SpatialTransformerNetwork()
@@ -304,7 +317,8 @@ def build_model(encoder, decoder, discriminator, lpips_fn, secret_input, image_i
         D_output_fake, D_heatmap = discriminator(encoded_warped)
 
     transformed_image = transform_net(encoded_image, args, global_step)
-    decoded_secret = decoder(transformed_image)
+    # plt.savefig(transformed_image, "temp_image_transformed")
+    decoded_secret = decoder(transformed_image)  # after net change: 4,100,400,400. before: 4,100
     bit_acc, str_acc = get_secret_acc(secret_input, decoded_secret)
 
     normalized_input = image_input * 2 - 1

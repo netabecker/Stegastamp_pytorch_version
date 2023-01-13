@@ -3,9 +3,7 @@ import train
 from easydict import EasyDict
 import yaml
 import os
-#logs_path: "./logs/secret_yuv_100k/"
-# checkpoints_path: './checkpoints/secret_yuv_100k/'
-# saved_models: './saved_models/secret_yuv_100k/'
+
 
 def cascade(yaml_args):
     import argparse

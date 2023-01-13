@@ -29,7 +29,7 @@ if not os.path.exists(args.saved_models):
 
 
 def main():
-    cascade_run.cascade(args)
+    # cascade_run.cascade(args)
 
     # code by Elad:
     # # fix random seeds
@@ -77,8 +77,8 @@ def main():
             no_im_loss = global_step < args.no_im_loss_steps
             l2_loss_scale = min(args.l2_loss_scale * global_step / args.l2_loss_ramp, args.l2_loss_scale)
             lpips_loss_scale = min(args.lpips_loss_scale * global_step / args.lpips_loss_ramp, args.lpips_loss_scale)
-            secret_loss_scale = min(args.secret_loss_scale * global_step / args.secret_loss_ramp,args.secret_loss_scale)
-            #secret_loss_scale = (args.secret_loss_scale * global_step / args.secret_loss_ramp)
+            secret_loss_scale = min(args.secret_loss_scale * global_step / args.secret_loss_ramp, args.secret_loss_scale)
+            # secret_loss_scale = (args.secret_loss_scale * global_step / args.secret_loss_ramp)
 
             #G_loss_scale = min(args.G_loss_scale * global_step / args.G_loss_ramp, args.G_loss_scale)
             #l2_edge_gain = 0
@@ -119,9 +119,7 @@ def main():
                 print('{:g}: Loss = {:.4f} -- secret loss = {:.2f} --- seed={:.1f}'.format(global_step, loss, secret_loss, args.seed))
                 writer.add_scalars('Loss values', {'loss': loss.item(), 'secret loss': secret_loss.item(),
                                                    'D_loss loss': D_loss.item()})
-
-            # if global_step % 100 == 0:
-            #     aux_functions.check_memory_stat()
+                # aux_functions.check_memory_stat()
 
             # Get checkpoint of best point:
             if global_step == 80_000:
@@ -132,6 +130,7 @@ def main():
                     args.min_loss = loss
                     torch.save(encoder, os.path.join(args.checkpoints_path, "encoder_best_total_loss.pth"))
                     torch.save(decoder, os.path.join(args.checkpoints_path, "decoder_best_total_loss.pth"))
+            if global_step > 10_000:
                 if secret_loss < args.min_secret_loss:
                     args.min_secret_loss = secret_loss
                     torch.save(encoder, os.path.join(args.checkpoints_path, "encoder_best_secret_loss.pth"))
