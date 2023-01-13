@@ -12,7 +12,7 @@ cuda: True
 
 exp_name: 2
 secret_size: 100
-num_steps: 100_000
+num_steps: 120_000
 batch_size: 4
 lr: 0.0001
 l2_loss_scale: 2

@@ -29,7 +29,7 @@ if not os.path.exists(args.saved_models):
 
 
 def main():
-    # cascade_run.cascade(args)
+    cascade_run.cascade(args)
 
     # code by Elad:
     # # fix random seeds

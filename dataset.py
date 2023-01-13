@@ -15,7 +15,7 @@ torch.manual_seed(SEED)
 torch.backends.cudnn.deterministic = True
 torch.backends.cudnn.benchmark = False
 np.random.seed(SEED)
-aux_functions.infoMessage0(f'dataset seed is set to: {SEED}')
+aux_functions.infoMessage0(f'Dataset seed is set to: {SEED}')
 
 class StegaData(Dataset):
     def __init__(self, data_path, secret_size=SECRET_SIZE, size=(400, 400)):
