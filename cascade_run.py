@@ -16,8 +16,8 @@ def cascade(yaml_args):
     # parser.add_argument('--logs_path', type=int, default=None)
     # parser.add_argument('--checkpoints_path', type=int, default=None)
     # parser.add_argument('--saved_models', type=int, default=None)
-    parser.add_argument('--seed', type=int, default=None)
-    parser.add_argument('--run', type=int, default=None)
+    parser.add_argument('--seed', type=int, default=1)
+    parser.add_argument('--run', type=int)
     # parser.add_argument('--lpips', type=int, default=None)
     parser = parser.parse_args()
 
@@ -34,15 +34,15 @@ def cascade(yaml_args):
     SEED = parser.seed
     # yaml_args.lpips_loss_scale = parser.lpips
 
-    yaml_args.logs_path = os.path.join("./logs/" + "yuv_secret_loss_2.5_lpips_0.01_seed_" + str(parser.seed) + "_run_" + str(parser.run))
+    yaml_args.logs_path = os.path.join("./logs/" + "yuv_secret_loss_2.5_lpips_1.5_seed_" + str(parser.seed) + "_run_" + str(parser.run))
     if not os.path.exists(yaml_args.logs_path):
         os.makedirs(yaml_args.logs_path)
 
-    yaml_args.checkpoints_path = os.path.join("./checkpoints/" + "yuv_secret_loss_2.5_lpips_0.01_seed_" + str(parser.seed) + "_run_" + str(parser.run))
+    yaml_args.checkpoints_path = os.path.join("./checkpoints/" + "yuv_secret_loss_2.5_lpips_1.5_seed_" + str(parser.seed) + "_run_" + str(parser.run))
     if not os.path.exists(yaml_args.checkpoints_path):
         os.makedirs(yaml_args.checkpoints_path)
 
-    yaml_args.saved_models = os.path.join("./saved_models/" + "yuv_secret_loss_2.5_lpips_0.01_seed_" + str(parser.seed) + "_run_" + str(parser.run))
+    yaml_args.saved_models = os.path.join("./saved_models/" + "yuv_secret_loss_2.5_lpips_1.5_seed_" + str(parser.seed) + "_run_" + str(parser.run))
     if not os.path.exists(yaml_args.saved_models):
         os.makedirs(yaml_args.saved_models)
 

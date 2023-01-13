@@ -316,8 +316,9 @@ def build_model(encoder, decoder, discriminator, lpips_fn, secret_input, image_i
         cross_entropy = cross_entropy.cuda()
     secret_loss = cross_entropy(decoded_secret, secret_input)
     decipher_indicator = 0
-    if torch.equal(decoded_secret, secret_input):
-        decipher_indicator = 1
+    if torch.sum(torch.sum(torch.round(decoded_secret[:, :96]) == secret_input[:, :96], axis=1) / 96 >= 0.7) > 0:
+        decipher_indicator = torch.sum(
+            torch.sum(torch.round(decoded_secret[:, :96]) == secret_input[:, :96], axis=1) / 96 >= 0.7)
 
     size = (int(image_input.shape[2]), int(image_input.shape[3]))
     gain = 10
