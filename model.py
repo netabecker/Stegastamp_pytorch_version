@@ -278,7 +278,7 @@ def build_model(encoder, decoder, discriminator, lpips_fn, secret_input, image_i
 
     residual_warped = encoder((secret_input, input_warped))
     encoded_warped = residual_warped + input_warped
-    encoded_warped = torch.clamp(encoded_warped, 0, 1)  # todo: examine. newly added - might ruin encryption.
+    # encoded_warped = torch.clamp(encoded_warped, 0, 1)  # todo: examine. newly added - might ruin encryption.
 
     residual = torchgeometry.warp_perspective(residual_warped, M[:, 0, :, :], dsize=(400, 400), flags='bilinear')
 

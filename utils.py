@@ -5,9 +5,18 @@ import random
 import torch
 import torch.nn.functional as F
 import torch.nn as nn
-
+import aux_functions
 from PIL import Image, ImageOps
 import matplotlib.pyplot as plt
+
+# fix seed
+SEED = 1
+torch.manual_seed(SEED)
+torch.backends.cudnn.deterministic = True
+torch.backends.cudnn.benchmark = False
+np.random.seed(SEED)
+aux_functions.infoMessage0(f'Utils seed is set to: {SEED}')
+
 
 def random_blur_kernel(probs, N_blur, sigrange_gauss, sigrange_line, wmin_line):
     N = N_blur
