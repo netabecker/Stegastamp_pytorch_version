@@ -19,12 +19,11 @@ def cascade(yaml_args):
     parser.add_argument('--yuv_y_scale', type=float, default=None)
     parser.add_argument('--yuv_u_scale', type=float, default=None)
     parser.add_argument('--yuv_v_scale', type=float, default=None)
-    # parser.add_argument('--logs_path', type=int, default=None)
-    # parser.add_argument('--checkpoints_path', type=int, default=None)
-    # parser.add_argument('--saved_models', type=int, default=None)
+    parser.add_argument('--logs_path', type=int, default=None)
+    parser.add_argument('--checkpoints_path', type=int, default=None)
+    parser.add_argument('--saved_models', type=int, default=None)
     parser.add_argument('--seed', type=int, default=1)
     parser.add_argument('--run', type=int)
-    # parser.add_argument('--lpips', type=int, default=None)
     parser = parser.parse_args()
 
     if parser.hsv_h_scale is not None:
