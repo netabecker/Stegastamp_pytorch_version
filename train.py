@@ -14,6 +14,10 @@ from torch.utils.data import DataLoader
 from torch.utils.tensorboard import SummaryWriter
 import lpips
 
+CHECKPOINT_MARK_1 = 10_000
+CHECKPOINT_MARK_2 = 1500
+IMAGE_SIZE = 400
+
 print("\n\n---------------------->")
 print("Hiding Messages in Images")
 print("By Dan Epshtein and Neta Becker")
@@ -42,7 +46,7 @@ def main():
     log_path = os.path.join(args.logs_path, str(args.exp_name))
     writer = SummaryWriter(log_path)
     infoMessage0('Loading data')
-    dataset = StegaData(args.train_path, args.secret_size, size=(400, 400))
+    dataset = StegaData(args.train_path, args.secret_size, size=(IMAGE_SIZE, IMAGE_SIZE))
     dataloader = DataLoader(dataset, batch_size=args.batch_size, shuffle=True, pin_memory=True)
 
     # encoder = model.StegaStampEncoder()   8.1.2023
@@ -65,8 +69,8 @@ def main():
     optimize_secret_loss = optim.Adam(g_vars, lr=args.lr)
     optimize_dis = optim.RMSprop(d_vars, lr=0.00001)
 
-    height = 400
-    width = 400
+    height = IMAGE_SIZE
+    width = IMAGE_SIZE
 
     total_steps = len(dataset) // args.batch_size + 1
     global_step = 0
@@ -81,13 +85,6 @@ def main():
             l2_loss_scale = min(args.l2_loss_scale * global_step / args.l2_loss_ramp, args.l2_loss_scale)
             secret_loss_scale = min(args.secret_loss_scale * global_step / args.secret_loss_ramp,
                                     args.secret_loss_scale)
-            #secret_loss_scale = (args.secret_loss_scale * global_step / args.secret_loss_ramp)
-
-            #G_loss_scale = min(args.G_loss_scale * global_step / args.G_loss_ramp, args.G_loss_scale)
-            #l2_edge_gain = 0
-            # if global_step > args.l2_edge_delay:
-            #     l2_edge_gain = min(args.l2_edge_gain * (global_step - args.l2_edge_delay) / args.l2_edge_ramp,
-            #                        args.l2_edge_gain)
 
             rnd_tran = min(args.rnd_trans * global_step / args.rnd_trans_ramp, args.rnd_trans)
             rnd_tran = np.random.uniform() * rnd_tran
@@ -125,17 +122,17 @@ def main():
                                                    'D_loss loss': D_loss.item()})
 
             # Get checkpoints:
-            if global_step % 10_000 == 0:
+            if global_step % CHECKPOINT_MARK_1 == 0:
                 torch.save(encoder, os.path.join(args.saved_models, "encoder.pth"))
                 torch.save(decoder, os.path.join(args.saved_models, "decoder.pth"))
 
             # save checkpoint of best image loss and secret loss
-            if global_step > 1500:
+            if global_step > CHECKPOINT_MARK_2:
                 if loss < args.min_loss:
                     args.min_loss = loss
                     torch.save(encoder, os.path.join(args.checkpoints_path, "encoder_best_total_loss.pth"))
                     torch.save(decoder, os.path.join(args.checkpoints_path, "decoder_best_total_loss.pth"))
-            if global_step > 10_000:
+            if global_step > CHECKPOINT_MARK_1:
                 if secret_loss < args.min_secret_loss:
                     args.min_secret_loss = secret_loss
                     torch.save(encoder, os.path.join(args.checkpoints_path, "encoder_best_secret_loss.pth"))
