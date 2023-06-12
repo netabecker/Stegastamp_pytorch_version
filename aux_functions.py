@@ -5,6 +5,12 @@ from matplotlib import pyplot as plt
 import torch
 SECRET_SIZE = 100
 
+"""
+This file contains helper function we used throught the code.
+The base version of the code doesnt contain any of those functions,
+this file was added in case it would become useful in future projects.
+"""
+
 print(f'Imported aux_functions library')
 def getLineNumber():
     return currentframe().f_back.f_lineno

@@ -8,51 +8,24 @@ from PIL import Image, ImageOps
 import matplotlib.pyplot as plt
 from easydict import EasyDict
 
+"""
+Run this test in order to check if the model was successful
+in encoding and decoding the images
+"""
 
 with open('cfg/setting.yaml', 'r') as f:
     param = EasyDict(yaml.load(f, Loader=yaml.SafeLoader))
 
-
 def main():
+    enc_model = os.path.join(param.checkpoints_path, "encoder_best_secret_loss.pth")
+    dec_model = os.path.join(param.checkpoints_path, "decoder_best_secret_loss.pth")
+    save_dir = os.path.join("./image"+enc_model[27:-12])
+    if not os.path.exists(save_dir):
+        os.makedirs(save_dir)
+    test_image = os.path.join("./small_images_dir")
 
-    import argparse
-    parser = argparse.ArgumentParser()
-    parser.add_argument('--encoder', type=str, default=os.path.join(param.saved_models, "encoder.pth"))
-    parser.add_argument('--decoder', type=str, default=os.path.join(param.saved_models, "decoder.pth"))
-    parser.add_argument('--recompile', type=str, default='y')
-    accuracy_args = parser.parse_args()
-
-    # enc_model = os.path.join(param.saved_models, "encoder.pth")
-    # dec_model = os.path.join(param.saved_models, "decoder.pth")
-    save_dir = os.path.join("./image"+accuracy_args.encoder[14:-12])
-
-    if 'y' in accuracy_args.recompile:
-        if not os.path.exists(save_dir):
-            os.makedirs(save_dir)
-        test_image = os.path.join("./small_images_dir")
-
-        os.system("python encode_image.py "+accuracy_args.encoder+" --images_dir="+test_image+" --secret=abcdefg "+"--save_dir="+save_dir)
-        # for filename in glob.glob(os.path.join(save_dir,"*jpg")):
-        #     # returned_value = os.system("decode_image.py "+dec_model+" --image="+filename)
-        #     if returned_value != 'Failed to decode'
-        #     print(filename)
-        #
-        os.system("python decode_image.py " + accuracy_args.decoder + " --images_dir=" + save_dir + " > " + save_dir + "/summary.txt")
-
-    fail_count = 0
-    file_location = save_dir + "/summary.txt"
-    full_path = os.getcwd() + file_location[1:]
-
-    with open(full_path, "a+"):
-        for line in full_path:
-            if "Failed to decode" in line:
-                fail_count = fail_count + 1
-
-        print('-------------------------------------------')
-        print(f'Fail number: {fail_count} out of 21')
-        print('-------------------------------------------')
-
-
+    os.system("python encode_image.py "+enc_model+" --images_dir="+test_image+" --secret=abcdefg "+"--save_dir="+save_dir)
+    os.system("python decode_image.py " + dec_model + " --images_dir=" + save_dir + " > " + save_dir + "/summary.txt")
 
 if __name__ == "__main__":
     main()

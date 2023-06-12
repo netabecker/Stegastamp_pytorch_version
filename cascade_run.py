@@ -4,13 +4,21 @@ from easydict import EasyDict
 import yaml
 import os
 
+"""
+This file was written for debug purposes.
+Call cascade_run.cascade(args) from main function in train.py in order to use it.
+This file will run your code a few times in order to speed up the hyper parameter tuning process.
+
+Please note, this function defines a seed (default value is 1).
+If your code doesn't use any - please remove all this line from the parser.
+"""
 
 def cascade(yaml_args):
     import argparse
     parser = argparse.ArgumentParser()
-    parser.add_argument('--hsv_h_scale', type=float, default=None)
-    parser.add_argument('--hsv_s_scale', type=float, default=None)
-    parser.add_argument('--hsv_v_scale', type=float, default=None)
+    parser.add_argument('--yuv_y_scale', type=float, default=None)
+    parser.add_argument('--yuv_u_scale', type=float, default=None)
+    parser.add_argument('--yuv_v_scale', type=float, default=None)
     # parser.add_argument('--logs_path', type=int, default=None)
     # parser.add_argument('--checkpoints_path', type=int, default=None)
     # parser.add_argument('--saved_models', type=int, default=None)
@@ -32,15 +40,15 @@ def cascade(yaml_args):
     SEED = parser.seed
     # yaml_args.lpips_loss_scale = parser.lpips
 
-    yaml_args.logs_path = os.path.join("./logs/" + "yuv_secret_loss_2.5_lpips_1.5_seed_" + str(parser.seed) + "_run_" + str(parser.run))
+    yaml_args.logs_path = os.path.join("./logs/" + "yuv_secret_loss_2.5_lpips_1.5_140K_seed_" + str(parser.seed) + "_run_" + str(parser.run))
     if not os.path.exists(yaml_args.logs_path):
         os.makedirs(yaml_args.logs_path)
 
-    yaml_args.checkpoints_path = os.path.join("./checkpoints/" + "yuv_secret_loss_2.5_lpips_1.5_seed_" + str(parser.seed) + "_run_" + str(parser.run))
+    yaml_args.checkpoints_path = os.path.join("./checkpoints/" + "yuv_secret_loss_2.5_lpips_1.5_140K_seed_" + str(parser.seed) + "_run_" + str(parser.run))
     if not os.path.exists(yaml_args.checkpoints_path):
         os.makedirs(yaml_args.checkpoints_path)
 
-    yaml_args.saved_models = os.path.join("./saved_models/" + "yuv_secret_loss_2.5_lpips_1.5_seed_" + str(parser.seed) + "_run_" + str(parser.run))
+    yaml_args.saved_models = os.path.join("./saved_models/" + "yuv_secret_loss_2.5_lpips_1.5_140K_seed_" + str(parser.seed) + "_run_" + str(parser.run))
     if not os.path.exists(yaml_args.saved_models):
         os.makedirs(yaml_args.saved_models)
 

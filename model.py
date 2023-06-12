@@ -1,6 +1,4 @@
 import sys
-
-import matplotlib.pyplot as plt
 sys.path.append("PerceptualSimilarity\\")
 import os
 import utils
@@ -12,8 +10,8 @@ from kornia import color
 import torch.nn.functional as F
 import warnings
 warnings.filterwarnings('ignore')
+from unet import unet_parts as UNet
 from torchvision import transforms
-SECRET_SIZE=100
 
 
 class Dense(nn.Module):
@@ -23,7 +21,6 @@ class Dense(nn.Module):
         self.out_features = out_features
         self.activation = activation
         self.kernel_initializer = kernel_initializer
-        # self.batch_norm = nn.BatchNorm1d
 
         self.linear = nn.Linear(in_features, out_features)
         # initialization
@@ -74,7 +71,7 @@ class Flatten(nn.Module):
 class StegaStampEncoder(nn.Module):
     def __init__(self):
         super(StegaStampEncoder, self).__init__()
-        self.secret_dense = Dense(SECRET_SIZE, 7500, activation='relu', kernel_initializer='he_normal')
+        self.secret_dense = Dense(100, 7500, activation='relu', kernel_initializer='he_normal')
 
         self.conv1 = Conv2D(6, 32, 3, activation='relu')
         self.conv2 = Conv2D(32, 32, 3, activation='relu', strides=2)
@@ -94,26 +91,13 @@ class StegaStampEncoder(nn.Module):
     def forward(self, inputs):
         secrect, image = inputs
         secrect = secrect - .5
-        # secrect[secrect < 0] = 0
         image = image - .5
-        # image[image < 0] = 0  # if the value is lower than 0 - set to 0!
 
         secrect = self.secret_dense(secrect)
         secrect = secrect.reshape(-1, 3, 50, 50)
         secrect_enlarged = nn.Upsample(scale_factor=(8, 8))(secrect)
-        # downsample image instead of upsample secret:
-        # image = nn.functional.interpolate(image, scale_factor=(1/8, 1/8))
 
         inputs = torch.cat([secrect_enlarged, image], dim=1)
-
-        # todo 04_01: Unet --> we'd like to transform from 4,6,50,50 -> 4,3,400,400
-        #  We can either add upsample to Unet or add another interpolation. we can add it in the end on the residual.
-        #  note: https://github.com/milesial/Pytorch-UNet/tree/master/unet
-        #  Unet is used for classification - we'd like to remove that part
-        #  Define another class - double convolution - for example: down, dc, down, up
-        #  another option - enlarge the secret to be bigger than 7500 - could be expensive (fc)
-        #  NOTE THE SKIP CONNECTIONS IN UNET
-
         conv1 = self.conv1(inputs)
         conv2 = self.conv2(conv1)
         conv3 = self.conv3(conv2)
@@ -133,6 +117,51 @@ class StegaStampEncoder(nn.Module):
         conv9 = self.conv9(merge9)
         residual = self.residual(conv9)
         return residual
+
+
+class StegaStampEncoderUnet(nn.Module):
+    def __init__(self, bilinear=False):
+        super(StegaStampEncoderUnet, self).__init__()
+        self.secret_dense = Dense(100, 7500, activation='relu', kernel_initializer='he_normal')
+
+        self.conv1 = nn.Conv2d(6, 6, 3, padding=8)
+        self.inc = (UNet.DoubleConv(6, 64))
+        self.down1 = (UNet.Down(64, 128))
+        self.down2 = (UNet.Down(128, 256))
+        self.DoubleConv = (UNet.DoubleConv(256, 512))
+        factor = 2 if bilinear else 1
+        self.up1 = (UNet.Up(512, 256 // factor, bilinear))
+        self.up2 = (UNet.Up(256, 128 // factor, bilinear))
+        self.up3 = (UNet.Up(128, 64 // factor, bilinear))
+        self.outc = (UNet.OutConv(64, 6))
+        self.conv2 = nn.Conv2d(6, 3, 15, padding=0)
+        self.sig = nn.Sigmoid()
+
+    def forward(self, inputs):
+        secrect, image = inputs
+        secrect = secrect - .5
+        image = image - .5
+
+        secrect = self.secret_dense(secrect)
+        secrect = secrect.reshape(-1, 3, 50, 50)
+        image = nn.functional.interpolate(image, scale_factor=(1/8, 1/8))
+        # secrect_enlarged = nn.Upsample(scale_factor=(8, 8))(secrect)
+
+        inputs = torch.cat([secrect, image], dim=1)
+        conv1 = self.conv1(inputs)
+        x1 = self.inc(conv1)
+        x2 = self.down1(x1)
+        x3 = self.down2(x2)
+        x4 = self.DoubleConv(x3)
+        x = self.up1(x4, x3)
+        x = self.up2(x, x2)
+        x = self.up3(x, x1)
+        x = self.outc(x)
+        x = self.conv2(x)
+
+        secrect_enlarged = nn.Upsample(scale_factor=(8, 8))(x)
+        secrect_enlarged = self.sig(secrect_enlarged)
+        return secrect_enlarged
 
 
 class SpatialTransformerNetwork(nn.Module):
@@ -158,8 +187,31 @@ class SpatialTransformerNetwork(nn.Module):
 
 
 class StegaStampDecoder(nn.Module):
-    def __init__(self, secret_size=SECRET_SIZE):
+    def __init__(self, secret_size=100):
         super(StegaStampDecoder, self).__init__()
+        self.secret_size = secret_size
+        self.stn = SpatialTransformerNetwork()
+        self.decoder = nn.Sequential(
+            Conv2D(3, 32, 3, strides=2, activation='relu'),
+            Conv2D(32, 32, 3, activation='relu'),
+            Conv2D(32, 64, 3, strides=2, activation='relu'),
+            Conv2D(64, 64, 3, activation='relu'),
+            Conv2D(64, 64, 3, strides=2, activation='relu'),
+            Conv2D(64, 128, 3, strides=2, activation='relu'),
+            Conv2D(128, 128, 3, strides=2, activation='relu'),
+            Flatten(),
+            Dense(21632, 512, activation='relu'),
+            Dense(512, secret_size, activation=None))
+
+    def forward(self, image):
+        image = image - .5
+        transformed_image = self.stn(image)
+        return torch.sigmoid(self.decoder(transformed_image))
+
+
+class StegaStampDecoderUnet(nn.Module):
+    def __init__(self, secret_size=100):
+        super(StegaStampDecoderUnet, self).__init__()
         self.secret_size = secret_size
         self.stn = SpatialTransformerNetwork()
         self.decoder = nn.Sequential(
@@ -244,14 +296,12 @@ def transform_net(encoded_image, args, global_step):
         sat_weight = sat_weight.cuda()
     encoded_image_lum = torch.mean(encoded_image * sat_weight, dim=1).unsqueeze_(1)
     encoded_image = (1 - rnd_sat) * encoded_image + rnd_sat * encoded_image_lum
-    encoded_image = torch.clamp(encoded_image, 0, 1) #todo: maybe remove
 
     # jpeg
     encoded_image = encoded_image.reshape([-1, 3, 400, 400])
     if not args.no_jpeg:
         encoded_image = utils.jpeg_compress_decompress(encoded_image, rounding=utils.round_only_at_0,
                                                        quality=jpeg_quality)
-        encoded_image = torch.clamp(encoded_image, 0, 1) #todo: maybe remove
 
     return encoded_image
 
@@ -268,7 +318,7 @@ def get_secret_acc(secret_true, secret_pred):
 
 
 def build_model(encoder, decoder, discriminator, lpips_fn, secret_input, image_input, l2_edge_gain,
-                borders, secret_size, M, loss_scales, yuv_scales, hsv_scales, args, global_step, writer):
+                borders, secret_size, M, loss_scales, yuv_scales, args, global_step, writer):
     test_transform = transform_net(image_input, args, global_step)
 
     input_warped = torchgeometry.warp_perspective(image_input, M[:, 1, :, :], dsize=(400, 400), flags='bilinear')
@@ -278,12 +328,11 @@ def build_model(encoder, decoder, discriminator, lpips_fn, secret_input, image_i
 
     residual_warped = encoder((secret_input, input_warped))
     encoded_warped = residual_warped + input_warped
-    # encoded_warped = torch.clamp(encoded_warped, 0, 1)  # todo: examine. newly added - might ruin encryption.
 
     residual = torchgeometry.warp_perspective(residual_warped, M[:, 0, :, :], dsize=(400, 400), flags='bilinear')
 
     if borders == 'no_edge':
-        encoded_image = image_input + residual  # todo: examine. might be causing burnt pixels.
+        encoded_image = image_input + residual
     elif borders == 'black':
         encoded_image = residual_warped + input_warped
         encoded_image = torchgeometry.warp_perspective(encoded_image, M[:, 0, :, :], dsize=(400, 400), flags='bilinear')
@@ -318,8 +367,7 @@ def build_model(encoder, decoder, discriminator, lpips_fn, secret_input, image_i
         D_output_fake, D_heatmap = discriminator(encoded_warped)
 
     transformed_image = transform_net(encoded_image, args, global_step)
-    # plt.savefig(transformed_image, "temp_image_transformed")
-    decoded_secret = decoder(transformed_image)  # after net change: 4,100,400,400. before: 4,100
+    decoded_secret = decoder(transformed_image)
     bit_acc, str_acc = get_secret_acc(secret_input, decoded_secret)
 
     normalized_input = image_input * 2 - 1
@@ -331,9 +379,8 @@ def build_model(encoder, decoder, discriminator, lpips_fn, secret_input, image_i
         cross_entropy = cross_entropy.cuda()
     secret_loss = cross_entropy(decoded_secret, secret_input)
     decipher_indicator = 0
-    if torch.sum(torch.sum(torch.round(decoded_secret[:, :96]) == secret_input[:, :96], axis=1) / 96 >= 0.7) > 0:
-        decipher_indicator = torch.sum(
-            torch.sum(torch.round(decoded_secret[:, :96]) == secret_input[:, :96], axis=1) / 96 >= 0.7)
+    if torch.sum(torch.sum(torch.round(decoded_secret[:, :96]) == secret_input[:, :96], axis=1) / 96 >= 0.7)>0:
+        decipher_indicator = torch.sum(torch.sum(torch.round(decoded_secret[:, :96]) == secret_input[:, :96], axis=1) / 96 >= 0.7)
 
     size = (int(image_input.shape[2]), int(image_input.shape[3]))
     gain = 10
@@ -351,9 +398,12 @@ def build_model(encoder, decoder, discriminator, lpips_fn, secret_input, image_i
         falloff_im = falloff_im.cuda()
     falloff_im *= l2_edge_gain
 
-    # YUV loss
     encoded_image_yuv = color.rgb_to_yuv(encoded_image)
+    avg_encoded = torch.mean(encoded_image_yuv)
+    max_encoded = torch.max(encoded_image_yuv)
     image_input_yuv = color.rgb_to_yuv(image_input)
+    avg_image = torch.mean(image_input_yuv)
+    max_image = torch.max(image_input_yuv)
     im_diff = encoded_image_yuv - image_input_yuv
     im_diff += im_diff * falloff_im.unsqueeze_(0)
     yuv_loss = torch.mean((im_diff) ** 2, axis=[0, 2, 3])
@@ -362,36 +412,8 @@ def build_model(encoder, decoder, discriminator, lpips_fn, secret_input, image_i
         yuv_scales = yuv_scales.cuda()
     image_loss = torch.dot(yuv_loss, yuv_scales)
 
-    # HSV loss
-    #
-    # min_value_0 = torch.min(encoded_image[0, :, :, :]) * torch.ones_like(encoded_image[0, :, :, :])
-    # min_value_1 = torch.min(encoded_image[1, :, :, :]) * torch.ones_like(encoded_image[0, :, :, :])
-    # min_value_2 = torch.min(encoded_image[2, :, :, :]) * torch.ones_like(encoded_image[0, :, :, :])
-    # min_value_3 = torch.min(encoded_image[3, :, :, :]) * torch.ones_like(encoded_image[0, :, :, :])
-    #
-    # min_value = torch.stack((min_value_0, min_value_1, min_value_2, min_value_3), 0)
-    #
-    # encoded_image_hsv = color.rgb_to_hsv(encoded_image + abs(min_value))
-    # # encoded_image_hsv = color.rgb_to_hsv(torch.clamp(encoded_image,0,1))
-    # avg_encoded = torch.mean(encoded_image_hsv)
-    # max_encoded = torch.max(encoded_image_hsv)
-    # image_input_hsv = color.rgb_to_hsv(image_input)
-    # avg_image = torch.mean(image_input_hsv)
-    # max_image = torch.max(image_input_hsv)
-    # # normalizing the values --> Elad suggested that we'll remove it
-    # # encoded_image_hsv[:, 0, :, :] = encoded_image_hsv[:, 0, :, :] / (2 * np.pi)
-    # # image_input_hsv[:, 0, :, :] = image_input_hsv[:, 0, :, :] / (2 * np.pi)
-    # im_diff = encoded_image_hsv - image_input_hsv
-    # im_diff += im_diff * falloff_im.unsqueeze_(0)
-    # hsv_loss = torch.mean((im_diff) ** 2, axis=[0, 2, 3])
-    # hsv_scales = torch.Tensor(hsv_scales)
-    # if args.cuda:
-    #     hsv_scales = hsv_scales.cuda()
-    # image_loss = torch.dot(hsv_loss, hsv_scales)
-
     D_loss = D_output_real - D_output_fake
-    G_loss = D_output_fake
-
+    G_loss = D_output_fake  # todo: figure out what it means
     loss = loss_scales[0] * image_loss + loss_scales[1] * lpips_loss + loss_scales[2] * secret_loss
     if not args.no_gan:
         loss += loss_scales[3] * G_loss
@@ -405,22 +427,22 @@ def build_model(encoder, decoder, discriminator, lpips_fn, secret_input, image_i
     writer.add_scalar('metric/bit_acc', bit_acc, global_step)
     writer.add_scalar('metric/str_acc', str_acc, global_step)
 
-    # writer.add_scalar('loss/avg_enc', avg_encoded, global_step)
-    # writer.add_scalar('loss/avg_img', avg_image, global_step)
-    # writer.add_scalar('loss/max_enc', max_encoded, global_step)
-    # writer.add_scalar('loss/max_img', max_image, global_step)
-    # print(f'decipher indicator = {decipher_indicator}')
+    writer.add_scalar('loss/avg_enc', avg_encoded, global_step)
+    writer.add_scalar('loss/avg_img', avg_image, global_step)
+    writer.add_scalar('loss/max_enc', max_encoded, global_step)
+    writer.add_scalar('loss/max_img', max_image, global_step)
     writer.add_scalar('loss/decipher_indicator', decipher_indicator, global_step)
-    writer.add_scalar('loss/secret_and_image_loss', 0.5*secret_loss + 0.5*image_loss, global_step)
-    # writer.add_scalar('loss/decipher_and_image_loss', decipher_indicator, global_step)
+    writer.add_scalar('loss/trans_max', torch.max(transformed_image), global_step)
+    writer.add_scalar('loss/enc_max', torch.max(encoded_warped), global_step)
+
 
     if global_step % 20 == 0:
         writer.add_image('input/image_input', image_input[0], global_step)
         writer.add_image('input/image_warped', input_warped[0], global_step)
-        writer.add_image('encoded/encoded_warped', encoded_warped[0], global_step)
+        writer.add_image('encoded/encoded_warped', torch.clamp(encoded_warped[0], min=0, max=1), global_step)
         writer.add_image('encoded/residual_warped', residual_warped[0] + 0.5, global_step)
-        writer.add_image('encoded/encoded_image', encoded_image[0], global_step)
+        writer.add_image('encoded/encoded_image', torch.clamp(encoded_image[0], min=0, max=1), global_step)
         writer.add_image('transformed/transformed_image', transformed_image[0], global_step)
         writer.add_image('transformed/test', test_transform[0], global_step)
-
     return loss, secret_loss, D_loss, bit_acc, str_acc
+

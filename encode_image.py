@@ -3,15 +3,12 @@ import glob
 import bchlib
 import numpy as np
 from PIL import Image, ImageOps
-
 import torch
 from torchvision import transforms
 
-
-
+# set values for BCH
 BCH_POLYNOMIAL = 137
 BCH_BITS = 5
-
 
 def main():
     import argparse
@@ -21,10 +18,9 @@ def main():
     parser.add_argument('--images_dir', type=str, default=None)
     parser.add_argument('--save_dir', type=str, default=r'./images')
     parser.add_argument('--secret', type=str, default='Stega!!')
-    # parser.add_argument('--secret_size', type=int, default=100)
+    parser.add_argument('--secret_size', type=int, default=100)
     parser.add_argument('--cuda', type=bool, default=True)
     args = parser.parse_args()
-
 
     if args.image is not None:
         files_list = [args.image]
@@ -75,18 +71,12 @@ def main():
 
                 residual = encoder((secret, image))
                 encoded = image + residual
-                encoded[encoded < 0] = 0
-                values_matrix_255 = encoded[encoded > 255]
-                values_matrix_255 = np.array(values_matrix_255.cpu())
-                # print(f'number of values greater than 255 in encoded image is: {np.count_nonzero(values_matrix_255, axis=None)}')
-                values_matrix_0 = encoded[encoded < 0]
-                values_matrix_0 = np.array(values_matrix_0.cpu())
-                # print(f'number of values lower than 0 in encoded image is: {np.count_nonzero(values_matrix_0, axis=None)}')
-
                 if args.cuda:
                     residual = residual.cpu()
                     encoded = encoded.cpu()
-                encoded = np.array(encoded.squeeze(0) * 255, dtype=np.uint8).transpose((1, 2, 0))
+                # encoded = np.array(encoded.squeeze(0) * 255, dtype=np.uint8).transpose((1, 2, 0))
+
+                encoded = np.array(torch.clamp(encoded, 0, 1).squeeze(0) * 255, dtype=np.uint8).transpose((1, 2, 0))
 
                 residual = residual[0] + .5
                 residual = np.array(residual.squeeze(0) * 255, dtype=np.uint8).transpose((1, 2, 0))

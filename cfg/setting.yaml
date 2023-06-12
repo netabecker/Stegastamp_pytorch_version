@@ -1,9 +1,9 @@
 
 #train_path: 'F:\\VOCdevkit\\VOC2012\\JPEGImages'
 train_path: '/home/netadan/Desktop/data/VOC2012/JPEGImages/'
-logs_path: "./logs/debug_new_net_trial2/"
-checkpoints_path: './checkpoints/debug_new_net_trial2/'
-saved_models: './saved_models/debug_new_net_trial2/'
+logs_path: "./logs/debug/"
+checkpoints_path: './checkpoints/debug/'
+saved_models: './saved_models/debug/'
 
 # running with value: THEANO_FLAGS="optimizer_excluding=conv_dnn"
 # THEANO_FLAGS="dnn.conv.algo_bwd_filter=deterministic,dnn.conv.algo_bwd_data=deterministic"
@@ -12,7 +12,7 @@ cuda: True
 
 exp_name: 2
 secret_size: 100
-num_steps: 120_000
+num_steps: 140_000
 batch_size: 4
 lr: 0.0001
 l2_loss_scale: 2
