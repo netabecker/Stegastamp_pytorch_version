@@ -1,5 +1,5 @@
 # StegaStamp using Pytorch
-#### Contributers: Dan Epshtien and Neta Becker
+#### Contributers: Dan Epshtien and Neta Becker. Based on Jisong Xie's work
 
 ### Goals: 
 * Develop a tool that encrypts information into a natural image based on existing code from Berkeley university. 
