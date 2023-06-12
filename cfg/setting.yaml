@@ -1,12 +1,9 @@
 
 #train_path: 'F:\\VOCdevkit\\VOC2012\\JPEGImages'
-train_path: '/home/netadan/Desktop/data/VOC2012/JPEGImages/'
+train_path: '<ENTER_PATH>/VOC2012/JPEGImages/' # Please enter the path to your local dataset
 logs_path: "./logs/debug/"
 checkpoints_path: './checkpoints/debug/'
 saved_models: './saved_models/debug/'
-
-# running with value: THEANO_FLAGS="optimizer_excluding=conv_dnn"
-# THEANO_FLAGS="dnn.conv.algo_bwd_filter=deterministic,dnn.conv.algo_bwd_data=deterministic"
 
 cuda: True
 
