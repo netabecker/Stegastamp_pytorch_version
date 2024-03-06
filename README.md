@@ -32,8 +32,11 @@ As seen in the graphs below, there is a trade-off between the two - if secret lo
 Per request - I added the trained models of the encoder and decoder. You can use them by running the following commands:
 
 <ins>To encode:</ins>
-python encode_image.py ||path to the trained encoder|| --images_dir=||path to images dir|| --save_dir=||path to location of wanted save dir||
+```
+python encode_image.py <path_to_the_trained_encoder> --images_dir=<path_to_images_dir> --save_dir=<path_to_location_of_wanted_save_dir>
+```
 
 <ins>To decode:</ins>
-python decode_image.py ||path to the trained decoder|| --images_dir=||path to the encoded images dir||
-
+```
+python decode_image.py <path_to_the_trained_decoder> --images_dir=<path_to_the_encoded_images_dir>
+```
